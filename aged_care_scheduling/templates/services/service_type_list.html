@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div data-aos="fade-up">
+    <h2 class="mb-4">Service Types</h2>
+  </div>
+  <div data-aos="fade-up">
+    <a href="{% url 'service_type_create' %}" class="btn btn-primary mb-3">Add New Service Type</a>
+  </div>
+  <div data-aos="fade-up">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Duration</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for service_type in service_types %}
+          <tr>
+            <td>{{ service_type.name }}</td>
+            <td>{{ service_type.description }}</td>
+            <td>{{ service_type.duration }}</td>
+            <td>
+              <a href="{% url 'service_type_update' service_type.id %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+              <a href="{% url 'service_type_delete' service_type.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4">No service types available.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if service_types.has_other_pages %}
+      <nav aria-label="Service types pagination">
+        <ul class="pagination">
+          {% if service_types.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ service_types.previous_page_number }}">&laquo; Previous</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo; Previous</span>
+            </li>
+          {% endif %}
+
+          {% for i in service_types.paginator.page_range %}
+            {% if service_types.number == i %}
+              <li class="page-item active">
+                <span class="page-link">{{ i }} <span class="sr-only">(current)</span></span>
+              </li>
+            {% else %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if service_types.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ service_types.next_page_number }}">Next &raquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">Next &raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+{% endblock %}

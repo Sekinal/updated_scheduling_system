@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ resident.first_name }} {{ resident.last_name }} Dashboard{% endblock %}
+
+{% block content %}
+<div data-aos="fade-up">
+    <h2>{{ resident.first_name }} {{ resident.last_name }} Dashboard</h2>
+    <p><strong>Date of Birth:</strong> {{ resident.date_of_birth }}</p>
+    <p><strong>Care Home:</strong> {{ resident.care_home }}</p>
+    <p><strong>Admission Date:</strong> {{ resident.admission_date }}</p>
+    <p><strong>Emergency Contact:</strong> {{ resident.emergency_email }}</p>
+    <p><strong>Emergency Phone:</strong> {{ resident.emergency_phone }}</p>
+
+    <h3>Active Services</h3>
+    <ul>
+    {% for service in active_services %}
+        <li>{{ service.service_type.name }} - Scheduled for {{ service.scheduled_time }}</li>
+    {% empty %}
+        <li>No active services.</li>
+    {% endfor %}
+    </ul>
+
+    <h3>Completed Services</h3>
+    <ul>
+    {% for service in completed_services %}
+        <li>{{ service.service_type.name }} - Completed on {{ service.scheduled_time }}</li>
+    {% empty %}
+        <li>No completed services.</li>
+    {% endfor %}
+    </ul>
+
+    <h3>Service Frequency (Last 30 Days)</h3>
+    <ul>
+    {% for service in service_frequency %}
+        <li>{{ service.service_type__name }}: {{ service.count }} times</li>
+    {% empty %}
+        <li>No services completed in the last 30 days.</li>
+    {% endfor %}
+    </ul>
+
+    <h3>Recent Visit History</h3>
+    <ul>
+    {% for visit in visit_history|slice:":5" %}
+        <li>{{ visit.service.service_type.name }} - {{ visit.visit_time }}</li>
+    {% empty %}
+        <li>No visit history.</li>
+    {% endfor %}
+    </ul>
+
+    <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-primary">Edit</a>
+    <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-danger">Delete</a>
+    <a href="{{ back_url }}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %}

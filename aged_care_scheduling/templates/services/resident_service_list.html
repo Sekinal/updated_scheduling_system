@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Services for {{ resident }}{% endblock %}
+
+{% block content %}
+    <div data-aos="fade-up">
+        <h2 class="mb-4">Services for {{ resident }}</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6" data-aos="fade-right">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">Scheduled Services</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in services %}
+                            <li class="list-group-item">
+                                {{ service.service_type }} - {{ service.scheduled_time }} - {{ service.get_status_display }}
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">No services scheduled.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+{% endblock %}

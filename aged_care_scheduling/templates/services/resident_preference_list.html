@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div data-aos="fade-up">
+    <h2 class="mb-4">Resident Preferences</h2>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="200">
+    <a href="{% url 'resident_preference_create' %}" class="btn btn-primary mb-3">Add New Preference</a>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="400">
+    <ul class="list-group">
+      {% for preference in preferences %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ preference.resident }} - {{ preference.service_type }}</strong>:
+            <br>
+            {{ preference.preferred_days }} from {{ preference.preferred_time_start }} to {{ preference.preferred_time_end }}
+          </div>
+        </li>
+      {% empty %}
+        <li class="list-group-item">No preferences set.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

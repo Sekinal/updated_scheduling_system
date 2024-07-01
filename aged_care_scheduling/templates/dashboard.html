@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <div data-aos="fade-up">
+        <h2 class="mb-4">Dashboard</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6" data-aos="fade-right">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Services</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in recent_services %}
+                            <li class="list-group-item">{{ service.service_type }} for {{ service.resident }} - {{ service.scheduled_time }}</li>
+                        {% empty %}
+                            <li class="list-group-item">No recent services.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6" data-aos="fade-left">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">Upcoming Services</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in upcoming_services %}
+                            <li class="list-group-item">{{ service.service_type }} for {{ service.resident }} - {{ service.scheduled_time }}</li>
+                        {% empty %}
+                            <li class="list-group-item">No upcoming services.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

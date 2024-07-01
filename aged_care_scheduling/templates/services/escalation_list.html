@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div data-aos="fade-up">
+    <h2 class="mb-4">Escalations</h2>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="200">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Resident</th>
+          <th>Service Type</th>
+          <th>Escalation Type</th>
+          <th>Reason</th>
+          <th>Date Created</th>
+          <th>Resolved</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for escalation in escalations %}
+          <tr>
+            <td>{{ escalation.resident }}</td>
+            <td>{{ escalation.service_type }}</td>
+            <td>{{ escalation.get_escalation_type_display }}</td>
+            <td>{{ escalation.reason }}</td>
+            <td>{{ escalation.date_created }}</td>
+            <td>{{ escalation.resolved|yesno:"Yes,No" }}</td>
+            <td>
+              <a href="{% url 'escalation_update' escalation.pk %}" class="btn btn-sm btn-outline-secondary">Update</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">No escalations found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Care Home{% endblock %}
+
+{% block content %}
+<div data-aos="fade-up" class="container">
+    <h1>Delete Care Home</h1>
+    <p>Are you sure you want to delete the care home "{{ object.name }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+        <a href="{% url 'care_homes:home_detail' object.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

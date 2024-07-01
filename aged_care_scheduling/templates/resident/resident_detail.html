@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ resident.first_name }} {{ resident.last_name }}{% endblock %}
+
+{% block content %}
+<div data-aos="fade-up">
+    <h2>{{ resident.first_name }} {{ resident.last_name }}</h2>
+    <p><strong>Date of Birth:</strong> {{ resident.date_of_birth }}</p>
+    <p><strong>Care Home:</strong> {{ resident.care_home }}</p>
+    <p><strong>Admission Date:</strong> {{ resident.admission_date }}</p>
+    <p><strong>Emergency Contact:</strong> {{ resident.emergency_email }}</p>
+    <p><strong>Emergency Phone:</strong> {{ resident.emergency_phone }}</p>
+
+    <a href="{% url 'residents:resident_dashboard' resident.pk %}" class="btn btn-info">View Dashboard</a>
+    <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-primary">Edit</a>
+    <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-danger">Delete</a>
+    <a href="{{ back_url }}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div data-aos="fade-up">
+    <h2 class="mb-4">Blocked Times</h2>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="200">
+    <a href="{% url 'blocked_time_create' %}" class="btn btn-primary mb-3">Add Blocked Time</a>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="400">
+    <ul class="list-group">
+      {% for blocked_time in blocked_times %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ blocked_time.resident }}</strong>: {{ blocked_time.start_time }} to {{ blocked_time.end_time }}
+            <span class="badge bg-secondary">{{ blocked_time.reason }}</span>
+          </div>
+        </li>
+      {% empty %}
+        <li class="list-group-item">No blocked times set.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

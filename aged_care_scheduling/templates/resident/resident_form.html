@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Resident Form{% endblock %}
+
+{% block content %}
+<div data-aos="fade-up">
+    <h2>{% if resident.pk %}Edit {{ resident.first_name }} {{ resident.last_name }}{% else %}Add New Resident{% endif %}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="button-container">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button onclick="history.back()" type="button" class="btn btn-secondary">Cancel</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

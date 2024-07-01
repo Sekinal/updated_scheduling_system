@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div data-aos="fade-up">
+    <h2 class="mb-4">Delete Service Type</h2>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="200">
+    <p>Are you sure you want to delete the service type "{{ object.name }}"?</p>
+  </div>
+  <div data-aos="fade-up" data-aos-delay="400">
+    <form method="post" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger me-2">Confirm Delete</button>
+    </form>
+    <a href="{% url 'service_type_list' %}" class="btn btn-secondary">Cancel</a>
+  </div>
+{% endblock %}

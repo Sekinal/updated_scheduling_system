@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    #calendar {
+        margin-bottom: 30px;
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+    .tooltip-inner {
+        max-width: 300px;
+        text-align: left;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Service Calendar</h1>
+    
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <select id="caregiver-select" class="form-control">
+                <option value="">All Caregivers</option>
+                {% for caregiver in caregivers %}
+                <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select id="resident-select" class="form-control">
+                <option value="">All Residents</option>
+                {% for resident in residents %}
+                <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select id="care-home-select" class="form-control">
+                <option value="">All Care Homes</option>
+                {% for care_home in care_homes %}
+                <option value="{{ care_home.id }}">{{ care_home.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+<!-- Calendar -->
+<div id="calendar"></div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Event details will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        if (calendarEl) {
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+                },
+                views: {
+                    listMonth: {
+                        buttonText: 'List'
+                    }
+                },
+                eventDidMount: function(info) {
+                    $(info.el).tooltip({
+                        title: info.event.title,
+                        placement: 'top',
+                        trigger: 'hover',
+                        container: 'body'
+                    });
+                },
+                eventClick: function(info) {
+                    var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+                    var modalBody = document.getElementById('eventModalBody');
+                    modalBody.innerHTML = `
+                        <p><strong>Title:</strong> ${info.event.title}</p>
+                        <p><strong>Start:</strong> ${info.event.start.toLocaleString()}</p>
+                        <p><strong>End:</strong> ${info.event.end ? info.event.end.toLocaleString() : 'N/A'}</p>
+                    `;
+                    modal.show();
+                },
+                events: function(info, successCallback, failureCallback) {
+                    $.ajax({
+                        url: '{% url "get_events" %}',
+                        data: {
+                            start: info.startStr,
+                            end: info.endStr,
+                            caregiver: $('#caregiver-select').val(),
+                            resident: $('#resident-select').val(),
+                            care_home: $('#care-home-select').val()
+                        },
+                        success: function(data) {
+                            successCallback(data);
+                        },
+                        error: function() {
+                            failureCallback();
+                        }
+                    });
+                },
+                dayMaxEvents: true, // allow "more" link when too many events
+            });
+            calendar.render();
+
+            $('#caregiver-select, #resident-select, #care-home-select').change(function() {
+                calendar.refetchEvents();
+            });
+        } else {
+            console.error('Calendar element not found');
+        }
+    });
+</script>
+{% endblock %}

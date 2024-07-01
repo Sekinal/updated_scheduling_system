@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Resident{% endblock %}
+
+{% block content %}
+<div data-aos="fade-up">
+    <h2>Confirm Delete</h2>
+    <p>Are you sure you want to delete the resident "{{ resident.first_name }} {{ resident.last_name }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+        <a href="{% url 'care_homes:home_detail' resident.care_home.id %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
