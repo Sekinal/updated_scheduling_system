@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-s*xxr#q!%i(*&j0)-uyf3hdkemu08(xfj0gx&yzf(_svfqwp4e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['thermostatic.pythonanywhere.com', '127.0.0.1']
 
 
 # Application definition
@@ -134,6 +134,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / STATIC_URL
+]
+STATIC_ROOT = BASE_DIR/'staticfiles'
+#STATIC_ROOT = '/var/www/thermostatic.pythonanywhere.com/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
