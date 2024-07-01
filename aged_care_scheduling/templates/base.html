@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,12 +14,27 @@
     <!-- AOS for scroll animations -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <!-- Custom CSS -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <style>
         body {
             padding-top: 60px;
         }
+        .navbar {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
         .navbar-brand {
-            font-weight: bold;
+            display: flex;
+            align-items: center;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .navbar-logo {
+            height: 40px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            margin-right: 10px;
         }
         .footer {
             margin-top: 40px;
@@ -32,7 +48,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="fas fa-home"></i> Care Home Management
+                <img src="{% static 'images/logo.png' %}" alt="Care Home Management Logo" class="navbar-logo">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -59,7 +75,6 @@
                             <i class="fas fa-cogs"></i> Service Types
                         </a>
                     </li>
-                    <!-- New Calendar Link -->
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'service_calendar' %}active{% endif %}" href="{% url 'service_calendar' %}">
                             <i class="fas fa-calendar"></i> Calendar
@@ -128,6 +143,7 @@
         AOS.init();
     </script>
     <!-- Additional JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
