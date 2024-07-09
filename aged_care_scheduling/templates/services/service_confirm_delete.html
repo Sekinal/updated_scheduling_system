@@ -12,6 +12,5 @@
       {% csrf_token %}
       <button type="submit" class="btn btn-danger me-2">Confirm Delete</button>
     </form>
-    <a href="{% url 'service_list' %}" class="btn btn-secondary">Cancel</a>
-  </div>
+    <a href="{% url 'residents:resident_dashboard' pk=object.resident.pk %}" class="btn btn-secondary">Cancel</a>  </div>
 {% endblock %}

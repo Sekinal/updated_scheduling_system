@@ -1,11 +1,19 @@
 from django.urls import reverse
-from django.views.generic import DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Resident, VisitHistory
+from .models import Resident
 from .forms import ResidentForm
-from services.models import Service
+from services.models import Service, ServiceType, ResidentServiceFrequency
 from django.db.models import Count
 from django.utils import timezone
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.db import transaction
+from django.core.paginator import Paginator
+from homes.models import CareHome
+from datetime import timedelta
+from services.forms import ResidentServiceFrequencyForm
 
 class ResidentDetailView(DetailView):
     model = Resident
@@ -56,7 +64,7 @@ class ResidentDeleteView(LoginRequiredMixin, DeleteView):
             return reverse('care_homes:home_detail', kwargs={'pk': self.object.care_home.id})
         else:
             return reverse('care_homes:home_list')
-
+        
 class ResidentDashboardView(DetailView):
     model = Resident
     template_name = 'resident/resident_dashboard.html'
@@ -64,25 +72,114 @@ class ResidentDashboardView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        resident = self.get_object()
+        resident = self.object
 
-        # Get visit history
-        context['visit_history'] = VisitHistory.objects.filter(resident=resident).select_related('service__service_type').order_by('-visit_time').distinct()
-
-        # Get active services
-        context['active_services'] = Service.objects.filter(resident=resident, status='scheduled').select_related('service_type').order_by('scheduled_time')
-
-        # Get service frequency (count of completed services in the last 30 days)
-        thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
-        context['service_frequency'] = VisitHistory.objects.filter(
+        # Service frequencies with date and time
+        service_frequencies = ResidentServiceFrequency.objects.filter(resident=resident)
+        context['service_frequencies'] = [
+            {
+                'id': sf.id,
+                'service_type': sf.service_type,
+                'period': sf.period,
+                'start_date': sf.start_date,
+            }
+            for sf in service_frequencies
+        ]
+        
+        # Form for adding new service frequency
+        context['service_frequency_form'] = ResidentServiceFrequencyForm(resident=resident)
+        
+        # Visit history (completed, rescheduled, or not completed services)
+        visit_history = Service.objects.filter(
             resident=resident,
-            visit_time__gte=thirty_days_ago
-        ).values('service__service_type__name').annotate(count=Count('id', distinct=True))
+            status__in=['completed', 'not_completed', 'refused']
+        ).order_by('-scheduled_time')
 
-        # Add back_url
+        # Pagination for visit history
+        paginator = Paginator(visit_history, 10)  # Show 10 services per page
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['visit_history'] = page_obj
+        
+        # Back URL
         if resident.care_home:
             context['back_url'] = reverse('care_homes:home_detail', kwargs={'pk': resident.care_home.pk})
         else:
             context['back_url'] = reverse('care_homes:home_list')
-
+        
         return context
+
+    def post(self, request, *args, **kwargs):
+        resident = self.get_object()
+        form = ResidentServiceFrequencyForm(request.POST, resident=resident)
+        if form.is_valid():
+            service_frequency = form.save(commit=False)
+            service_frequency.resident = resident
+            service_frequency.save()
+            messages.success(request, 'Service frequency added successfully.')
+        else:
+            messages.error(request, 'Error adding service frequency. Please check the form.')
+        return redirect('residents:resident_dashboard', pk=resident.pk)    
+class ResidentServiceListView(LoginRequiredMixin, ListView):
+    model = Service
+    template_name = 'services/resident_service_list.html'
+    context_object_name = 'services'
+    paginate_by = 10  # Number of services per page
+
+    def get_queryset(self):
+        self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
+        return Service.objects.filter(resident=self.resident).order_by('scheduled_time')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['resident'] = self.resident
+        return context
+
+class DeleteAllServicesView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        resident_id = kwargs.get('resident_id')
+        resident = get_object_or_404(Resident, id=resident_id)
+
+        services = Service.objects.filter(resident=resident)
+        count = services.count()
+        services.delete()
+
+        messages.success(request, f"All {count} services for {resident.first_name} {resident.last_name} have been deleted.")
+        return redirect('resident_service_list', resident_id=resident_id)
+    
+class ServiceFrequencyUpdateView(UpdateView):
+    model = ResidentServiceFrequency
+    fields = ['frequency', 'period']
+    template_name = 'resident/service_frequency_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Service frequency updated successfully.')
+        return super().form_valid(form)
+
+class ServiceFrequencyDeleteView(DeleteView):
+    model = ResidentServiceFrequency
+    template_name = 'resident/service_frequency_confirm_delete.html'
+
+    def get_success_url(self):
+        return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
+
+    @transaction.atomic
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+
+        # Delete all related scheduled services
+        Service.objects.filter(
+            resident=self.object.resident,
+            service_type=self.object.service_type,
+            status='scheduled'
+        ).delete()
+
+        # Delete the service frequency
+        self.object.delete()
+
+        messages.success(self.request, 'Service frequency and all related scheduled services have been deleted.')
+        return redirect(success_url)

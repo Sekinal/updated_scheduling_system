@@ -24,19 +24,19 @@ def calendar_view(request):
 def get_events(request):
     start = request.GET.get('start')
     end = request.GET.get('end')
-    caregiver_id = request.GET.get('caregiver')
-    resident_id = request.GET.get('resident')
-    care_home_id = request.GET.get('care_home')
+    caregiver_ids = request.GET.getlist('caregivers[]')
+    resident_ids = request.GET.getlist('residents[]')
+    care_home_ids = request.GET.getlist('care_homes[]')
 
     services = Service.objects.filter(scheduled_time__range=[start, end])
     blocked_times = BlockedTime.objects.filter(start_time__range=[start, end])
 
-    if caregiver_id:
-        services = services.filter(caregiver_id=caregiver_id)
-    if resident_id:
-        services = services.filter(resident_id=resident_id)
-    if care_home_id:
-        services = services.filter(resident__care_home_id=care_home_id)
+    if caregiver_ids:
+        services = services.filter(caregiver_id__in=caregiver_ids)
+    if resident_ids:
+        services = services.filter(resident_id__in=resident_ids)
+    if care_home_ids:
+        services = services.filter(resident__care_home_id__in=care_home_ids)
 
     events = []
     for service in services:
@@ -50,9 +50,9 @@ def get_events(request):
                 'resident': f"{service.resident.first_name} {service.resident.last_name}",
                 'care_home': service.resident.care_home.name,
                 'service_type': service.service_type.name,
+                'caregiver': service.caregiver.username if service.caregiver else 'Unassigned'
             }
         })
-
 
     for blocked_time in blocked_times:
         events.append({

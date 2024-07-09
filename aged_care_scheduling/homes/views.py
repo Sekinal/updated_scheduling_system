@@ -46,28 +46,24 @@ class CareHomeListView(LoginRequiredMixin, ListView):
         
         return context
 
-class CareHomeDetailView(LoginRequiredMixin, DetailView):
+class CareHomeDetailView(DetailView):
     model = CareHome
     template_name = 'care_homes/home_detail.html'
     context_object_name = 'care_home'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['available_capacity'] = self.object.available_capacity()
-        
-        residents = Resident.objects.filter(care_home=self.object)
+        residents = self.object.residents.all()
         search_query = self.request.GET.get('search')
         if search_query:
-            residents = residents.filter(
-                Q(first_name__icontains=search_query) |
-                Q(last_name__icontains=search_query)
-            )
+            residents = residents.filter(Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query))
         
         paginator = Paginator(residents, 10)  # Show 10 residents per page
-        page = self.request.GET.get('page')
-        context['residents'] = paginator.get_page(page)
-        context['search_query'] = search_query
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
         
+        context['residents'] = page_obj
+        context['search_query'] = search_query
         return context
 
 class CareHomeCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):

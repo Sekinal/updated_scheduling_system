@@ -1,13 +1,19 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from .models import Service, ServiceType, ResidentPreference, BlockedTime, Escalation
 from .forms import ServiceTypeForm, ServiceForm, ResidentPreferenceForm, BlockedTimeForm, EscalationForm
 from residents.models import Resident
 from django.core.paginator import Paginator
+from dateutil.relativedelta import relativedelta
 from django.db.models import Q
+from django.db import transaction
+from django.views.generic import View
+from django.utils import timezone
+from .models import ResidentServiceFrequency
+from .forms import ResidentServiceFrequencyForm
 
 class ServiceTypeListView(LoginRequiredMixin, ListView):
     model = ServiceType
@@ -39,46 +45,63 @@ class ServiceCreateView(LoginRequiredMixin, CreateView):
     model = Service
     form_class = ServiceForm
     template_name = 'services/service_form.html'
-    success_url = reverse_lazy('service_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        resident_id = self.request.GET.get('resident_id')
+        if resident_id:
+            initial['resident'] = get_object_or_404(Resident, pk=resident_id)
+        return initial
+
+    def get_success_url(self):
+        if self.object.resident:
+            return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
+        else:
+            return reverse_lazy('service_list')
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        service = self.object
-        if service.status == 'refused':
-            messages.warning(self.request, f"Service for {service.resident} has been marked as refused.")
-        elif service.status == 'not_completed':
-            messages.info(self.request, f"Service for {service.resident} has been marked as not completed and rescheduled.")
-        return response
-
+        messages.success(self.request, f"Service scheduled successfully for {self.object.resident}")
+        return response    
+class DeleteAllServicesView(LoginRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        Service.objects.all().delete()
+        messages.success(request, "All services have been deleted.")
+        return redirect(reverse_lazy('service_list'))
+    
 class ServiceUpdateView(LoginRequiredMixin, UpdateView):
     model = Service
     form_class = ServiceForm
     template_name = 'services/service_form.html'
-    success_url = reverse_lazy('service_list')
+
+    def get_success_url(self):
+        if self.object.resident:
+            return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
+        else:
+            return reverse_lazy('service_list')
 
     def form_valid(self, form):
-        old_status = self.object.status
         response = super().form_valid(form)
-        service = self.object
-        if service.status != old_status:
-            if service.status == 'completed':
-                messages.success(self.request, f"Service for {service.resident} has been marked as completed.")
-            elif service.status == 'refused':
-                messages.warning(self.request, f"Service for {service.resident} has been marked as refused.")
-            elif service.status == 'not_completed':
-                messages.info(self.request, f"Service for {service.resident} has been marked as not completed and rescheduled.")
+        messages.success(self.request, f"Service updated successfully for {self.object.resident}")
         return response
-
 class ServiceDeleteView(LoginRequiredMixin, DeleteView):
     model = Service
     template_name = 'services/service_confirm_delete.html'
-    success_url = reverse_lazy('service_list')
+
+    def get_success_url(self):
+        return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
 
 class ServiceListView(LoginRequiredMixin, ListView):
     model = Service
     template_name = 'services/service_list.html'
     context_object_name = 'services'
-    paginate_by = 10  # Number of services per page
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Service.objects.filter(
+            scheduled_time__gte=timezone.now()
+        ).order_by('scheduled_time')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,40 +115,25 @@ class ServiceListView(LoginRequiredMixin, ListView):
         # Fetch all blocked times
         all_blocked_times = BlockedTime.objects.all().order_by('start_time')
         
-        # Add debug information
-        context['blocked_times_count'] = all_blocked_times.count()
-        context['all_blocked_times'] = all_blocked_times
-
         # Pagination for blocked times
         blocked_paginator = Paginator(all_blocked_times, 10)  # 10 blocked times per page
         blocked_page = self.request.GET.get('blocked_page')
         context['blocked_times'] = blocked_paginator.get_page(blocked_page)
 
         return context
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        search_query = self.request.GET.get('search')
-        if search_query:
-            queryset = queryset.filter(
-                Q(service_type__name__icontains=search_query) |
-                Q(resident__first_name__icontains=search_query) |
-                Q(resident__last_name__icontains=search_query)
-            )
-        return queryset.order_by('-scheduled_time')  # Changed to descending order
-
 class ResidentServiceListView(LoginRequiredMixin, ListView):
     model = Service
     template_name = 'services/resident_service_list.html'
     context_object_name = 'services'
+    paginate_by = 10
 
     def get_queryset(self):
-        resident_id = self.kwargs['resident_id']
-        return Service.objects.filter(resident__id=resident_id)
+        self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
+        return Service.objects.filter(resident=self.resident).order_by('scheduled_time')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['resident'] = get_object_or_404(Resident, id=self.kwargs['resident_id'])
+        context['resident'] = self.resident
         return context
 
 class ResidentPreferenceCreateView(LoginRequiredMixin, CreateView):
@@ -139,36 +147,35 @@ class ResidentPreferenceListView(LoginRequiredMixin, ListView):
     template_name = 'services/resident_preference_list.html'
     context_object_name = 'preferences'
 
+class BlockedTimeListView(LoginRequiredMixin, ListView):
+    model = BlockedTime
+    template_name = 'services/blocked_times.html'
+    context_object_name = 'blocked_times'
+    paginate_by = 10
+
 class BlockedTimeCreateView(LoginRequiredMixin, CreateView):
     model = BlockedTime
     form_class = BlockedTimeForm
     template_name = 'services/blocked_time_form.html'
     success_url = reverse_lazy('blocked_time_list')
 
-class BlockedTimeListView(LoginRequiredMixin, ListView):
-    model = BlockedTime
-    template_name = 'services/blocked_time_list.html'
-    context_object_name = 'blocked_times'
-
 class BlockedTimeUpdateView(LoginRequiredMixin, UpdateView):
     model = BlockedTime
     form_class = BlockedTimeForm
     template_name = 'services/blocked_time_form.html'
-    success_url = reverse_lazy('service_list')
+    success_url = reverse_lazy('blocked_time_list')
 
 class BlockedTimeDeleteView(LoginRequiredMixin, DeleteView):
     model = BlockedTime
     template_name = 'services/blocked_time_confirm_delete.html'
-    success_url = reverse_lazy('service_list')
+    success_url = reverse_lazy('blocked_time_list')
     
 class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
     model = Service
     form_class = ServiceForm
     template_name = 'services/service_status_update.html'
-    success_url = reverse_lazy('service_list')
 
     def form_valid(self, form):
-        old_status = self.object.status
         service = form.save(commit=False)
         
         if service.status == 'completed':
@@ -191,8 +198,7 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_invalid(form)
 
     def get_success_url(self):
-        messages.success(self.request, "Service status updated successfully.")
-        return reverse_lazy('service_list')
+        return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
 
 
 class EscalationListView(LoginRequiredMixin, ListView):
@@ -221,3 +227,39 @@ def check_missed_services(request):
     Service.check_missed_services()
     messages.info(request, "Missed services have been checked and escalated if necessary.")
     return redirect('service_list')
+
+
+def edit_service_frequency(request, pk):
+    service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
+    if request.method == 'POST':
+        form = ResidentServiceFrequencyForm(request.POST, instance=service_frequency, resident=service_frequency.resident)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Service frequency updated successfully.')
+            return redirect('residents:resident_dashboard', pk=service_frequency.resident.pk)
+    else:
+        form = ResidentServiceFrequencyForm(instance=service_frequency, resident=service_frequency.resident)
+    
+    return render(request, 'services/edit_service_frequency.html', {'form': form, 'service_frequency': service_frequency})
+
+def delete_service_frequency(request, pk):
+    service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
+    resident_pk = service_frequency.resident.pk
+    service_frequency.delete()
+    messages.success(request, 'Service frequency deleted successfully.')
+    return redirect('residents:resident_dashboard', pk=resident_pk)
+
+def add_service_frequency(request, resident_id):
+    resident = get_object_or_404(Resident, pk=resident_id)
+    if request.method == 'POST':
+        form = ResidentServiceFrequencyForm(request.POST, resident=resident)
+        if form.is_valid():
+            service_frequency = form.save(commit=False)
+            service_frequency.resident = resident
+            service_frequency.save()
+            messages.success(request, 'Service frequency added successfully.')
+            return redirect('residents:resident_dashboard', pk=resident.pk)
+    else:
+        form = ResidentServiceFrequencyForm(resident=resident)
+    
+    return render(request, 'services/add_service_frequency.html', {'form': form, 'resident': resident})

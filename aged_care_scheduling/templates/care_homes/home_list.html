@@ -103,6 +103,7 @@
                             <a href="{% url 'residents:resident_dashboard' resident.pk %}" class="btn btn-sm btn-info">Dashboard</a>
                             <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-sm btn-primary">Edit</a>
                             <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                            <a href="{% url 'resident_service_list' resident.pk %}" class="btn btn-sm btn-success">Services</a>
                         </td>
                     </tr>
                 {% endfor %}

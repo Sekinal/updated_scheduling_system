@@ -4,7 +4,26 @@ from django.core.exceptions import ValidationError
 from residents.models import Resident
 from django.contrib.auth.models import User
 import json
+from .models import ResidentServiceFrequency, ServiceType
+import calendar
 
+class ResidentServiceFrequencyForm(forms.ModelForm):
+    class Meta:
+        model = ResidentServiceFrequency
+        fields = ['service_type', 'period', 'start_date']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        resident = kwargs.pop('resident', None)
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        return cleaned_data
+    
 class ServiceTypeForm(forms.ModelForm):
     class Meta:
         model = ServiceType
@@ -16,18 +35,7 @@ class ServiceTypeForm(forms.ModelForm):
 class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
-        fields = [
-            'resident', 
-            'service_type', 
-            'caregiver', 
-            'scheduled_time', 
-            'status', 
-            'completion_reason', 
-            'reschedule_reason', 
-            'completion_notes',
-            'is_recurring', 
-            'recurrence_pattern'
-        ]
+        fields = ['resident', 'service_type', 'caregiver', 'scheduled_time', 'status', 'completion_reason', 'reschedule_reason', 'completion_notes']
         widgets = {
             'scheduled_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'completion_notes': forms.Textarea(attrs={'rows': 3}),
@@ -38,8 +46,7 @@ class ServiceForm(forms.ModelForm):
         self.fields['completion_reason'].required = False
         self.fields['reschedule_reason'].required = False
         self.fields['completion_notes'].required = False
-        self.fields['is_recurring'].required = False
-        self.fields['recurrence_pattern'].required = False
+        self.fields['resident'].widget.attrs['readonly'] = True
 
     def clean(self):
         cleaned_data = super().clean()
@@ -64,9 +71,6 @@ class ServiceForm(forms.ModelForm):
                 self.add_error('completion_reason', "Completion reason for refused services should be 'refused'.")
             if reschedule_reason:
                 self.add_error('reschedule_reason', "Reschedule reason should not be provided for refused services.")
-
-        if cleaned_data.get('is_recurring') and not cleaned_data.get('recurrence_pattern'):
-            self.add_error('recurrence_pattern', "Please provide a recurrence pattern for recurring services.")
 
         return cleaned_data
 

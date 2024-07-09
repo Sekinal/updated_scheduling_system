@@ -1,11 +1,13 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from residents.models import Resident, VisitHistory
+from residents.models import Resident
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db import transaction
+from datetime import datetime
+import calendar
 import json
 
 class ServiceType(models.Model):
@@ -47,8 +49,6 @@ class Service(models.Model):
     completion_reason = models.CharField(max_length=50, choices=COMPLETION_REASONS, blank=True, null=True)
     reschedule_reason = models.CharField(max_length=50, choices=RESCHEDULE_REASONS, blank=True, null=True)
     completion_notes = models.TextField(blank=True, null=True)
-    is_recurring = models.BooleanField(default=False)
-    recurrence_pattern = models.CharField(max_length=50, blank=True, null=True)
     refusal_count = models.PositiveIntegerField(default=0)
     last_refusal_date = models.DateField(null=True, blank=True)
 
@@ -80,7 +80,6 @@ class Service(models.Model):
         self.status = 'completed'
         self.completion_reason = reason
         self.save()
-        VisitHistory.objects.create(resident=self.resident, service=self, visit_time=timezone.now())
 
     def mark_as_not_completed(self, reason):
         self.status = 'not_completed'
@@ -103,7 +102,6 @@ class Service(models.Model):
                 reason=f"Service refused {self.refusal_count} times"
             )
 
-
     def reschedule(self):
         next_available_time = self.find_next_available_slot()
         if next_available_time:
@@ -114,9 +112,7 @@ class Service(models.Model):
                 scheduled_time=next_available_time,
                 status='scheduled'
             )
-            
             return new_service
-
         return None
 
     def find_next_available_slot(self):
@@ -196,9 +192,106 @@ class Service(models.Model):
                 reason="Service not recorded"
             )
 
+    @classmethod
+    def create_recurring_services(cls, resident_service_frequency):
+        now = timezone.now()
+        if resident_service_frequency.period == 'daily':
+            for i in range(7):  # Create services for the next 7 days
+                scheduled_time = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=i)
+                cls.objects.create(
+                    resident=resident_service_frequency.resident,
+                    service_type=resident_service_frequency.service_type,
+                    scheduled_time=scheduled_time,
+                    status='scheduled'
+                )
+        elif resident_service_frequency.period == 'weekly':
+            scheduled_time = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=7)
+            cls.objects.create(
+                resident=resident_service_frequency.resident,
+                service_type=resident_service_frequency.service_type,
+                scheduled_time=scheduled_time,
+                status='scheduled'
+            )
+        elif resident_service_frequency.period == 'monthly':
+            scheduled_time = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=30)
+            cls.objects.create(
+                resident=resident_service_frequency.resident,
+                service_type=resident_service_frequency.service_type,
+                scheduled_time=scheduled_time,
+                status='scheduled'
+            )
+
     def __str__(self):
         return f"{self.service_type} for {self.resident} at {self.scheduled_time}"
 
+class ResidentServiceFrequency(models.Model):
+    PERIOD_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ]
+
+    resident = models.ForeignKey(Resident, on_delete=models.CASCADE, related_name='service_frequencies')
+    service_type = models.ForeignKey(ServiceType, on_delete=models.CASCADE)
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    start_date = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('resident', 'service_type', 'start_date')
+
+    def __str__(self):
+        return f"{self.resident} - {self.service_type}: {self.period} starting {self.start_date}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            self.create_services()
+        else:
+            self.update_services()
+
+    def delete(self, *args, **kwargs):
+        self.delete_services()
+        super().delete(*args, **kwargs)
+
+    def create_services(self):
+        start_datetime = self.start_date
+        end_date = start_datetime.date() + timedelta(days=180)  # Create services for the next 6 months
+
+        current_date = start_datetime.date()
+        while current_date <= end_date:
+            if self.period == 'daily':
+                self.create_service(current_date)
+            elif self.period == 'weekly' and current_date.weekday() == start_datetime.weekday():
+                self.create_service(current_date)
+            elif self.period == 'monthly' and current_date.day == start_datetime.day:
+                # Handle cases where the day might not exist in some months
+                if current_date.month != start_datetime.month or current_date.day == start_datetime.day:
+                    self.create_service(current_date)
+            
+            current_date += timedelta(days=1)
+
+    def create_service(self, date):
+        Service.objects.create(
+            resident=self.resident,
+            service_type=self.service_type,
+            scheduled_time=timezone.make_aware(datetime.combine(date, self.start_date.time())),
+            status='scheduled'
+        )
+
+    def update_services(self):
+        # Delete existing scheduled services
+        self.delete_services()
+        # Create new services based on updated frequency
+        self.create_services()
+
+    def delete_services(self):
+        Service.objects.filter(
+            resident=self.resident,
+            service_type=self.service_type,
+            status='scheduled',
+            scheduled_time__gte=self.start_date
+        ).delete()
 class Escalation(models.Model):
     ESCALATION_TYPES = (
         ('refusal', 'Service Refusal'),
