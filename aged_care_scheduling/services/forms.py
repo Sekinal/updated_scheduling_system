@@ -10,19 +10,16 @@ import calendar
 class ResidentServiceFrequencyForm(forms.ModelForm):
     class Meta:
         model = ResidentServiceFrequency
-        fields = ['service_type', 'period', 'start_date']
+        fields = ['service_type', 'period', 'frequency', 'start_date', 'end_date']
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'datetime-local'}),
+            'start_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'end_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
 
     def __init__(self, *args, **kwargs):
         resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        
-        return cleaned_data
+        self.fields['end_date'].required = False
     
 class ServiceTypeForm(forms.ModelForm):
     class Meta:

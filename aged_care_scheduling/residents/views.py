@@ -70,18 +70,20 @@ class ResidentDashboardView(DetailView):
     template_name = 'resident/resident_dashboard.html'
     context_object_name = 'resident'
 
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         resident = self.object
 
-        # Service frequencies with date and time
         service_frequencies = ResidentServiceFrequency.objects.filter(resident=resident)
         context['service_frequencies'] = [
             {
                 'id': sf.id,
                 'service_type': sf.service_type,
                 'period': sf.period,
+                'frequency': sf.frequency,
                 'start_date': sf.start_date,
+                'end_date': sf.end_date,
             }
             for sf in service_frequencies
         ]

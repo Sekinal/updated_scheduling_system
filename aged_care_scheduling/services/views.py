@@ -228,7 +228,6 @@ def check_missed_services(request):
     messages.info(request, "Missed services have been checked and escalated if necessary.")
     return redirect('service_list')
 
-
 def edit_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     if request.method == 'POST':

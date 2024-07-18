@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.core.validators import MinValueValidator
 from django.db import transaction
 from datetime import datetime
 import calendar
@@ -233,14 +234,16 @@ class ResidentServiceFrequency(models.Model):
 
     resident = models.ForeignKey(Resident, on_delete=models.CASCADE, related_name='service_frequencies')
     service_type = models.ForeignKey(ServiceType, on_delete=models.CASCADE)
-    period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, null=True)
+    frequency = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('resident', 'service_type', 'start_date')
 
     def __str__(self):
-        return f"{self.resident} - {self.service_type}: {self.period} starting {self.start_date}"
+        return f"{self.resident} - {self.service_type}: Every {self.frequency} {self.period} starting {self.start_date}"
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -256,18 +259,23 @@ class ResidentServiceFrequency(models.Model):
 
     def create_services(self):
         start_datetime = self.start_date
-        end_date = start_datetime.date() + timedelta(days=180)  # Create services for the next 6 months
+        end_date = self.end_date.date() if self.end_date else (start_datetime.date() + timedelta(days=180))  # Default to 6 months if no end date
 
         current_date = start_datetime.date()
         while current_date <= end_date:
             if self.period == 'daily':
-                self.create_service(current_date)
-            elif self.period == 'weekly' and current_date.weekday() == start_datetime.weekday():
-                self.create_service(current_date)
-            elif self.period == 'monthly' and current_date.day == start_datetime.day:
-                # Handle cases where the day might not exist in some months
-                if current_date.month != start_datetime.month or current_date.day == start_datetime.day:
+                if (current_date - start_datetime.date()).days % self.frequency == 0:
                     self.create_service(current_date)
+            elif self.period == 'weekly':
+                if current_date.weekday() == start_datetime.weekday() and \
+                   (current_date - start_datetime.date()).days // 7 % self.frequency == 0:
+                    self.create_service(current_date)
+            elif self.period == 'monthly':
+                if current_date.day == start_datetime.day and \
+                   (current_date.year - start_datetime.year) * 12 + current_date.month - start_datetime.month % self.frequency == 0:
+                    # Handle cases where the day might not exist in some months
+                    if current_date.month != start_datetime.month or current_date.day == start_datetime.day:
+                        self.create_service(current_date)
             
             current_date += timedelta(days=1)
 
@@ -290,7 +298,8 @@ class ResidentServiceFrequency(models.Model):
             resident=self.resident,
             service_type=self.service_type,
             status='scheduled',
-            scheduled_time__gte=self.start_date
+            scheduled_time__gte=self.start_date,
+            scheduled_time__lte=self.end_date or timezone.now() + timedelta(days=180)
         ).delete()
 class Escalation(models.Model):
     ESCALATION_TYPES = (
