@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    #calendar {
+        margin-bottom: 30px;
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+    .tooltip-inner {
+        max-width: 300px;
+        text-align: left;
+    }
+    #caregiver-select {
+        height: auto;
+        min-height: 38px;
+    }
+    #caregiver-select option {
+        padding: 5px;
+    }
+    .planner-container {
+        display: flex;
+        height: 80vh;
+    }
+    .sidebar {
+        width: 250px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        overflow-y: auto;
+    }
+    .main-content {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+    }
+    .unscheduled-event {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px;
+        margin: 2px 0;
+        border-radius: 3px;
+        cursor: move;
+    }
+    #save-schedule-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Service Planner</h1>
+    
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <select id="caregiver-select" class="form-control" required>
+                {% for caregiver in caregivers %}
+                <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div class="planner-container">
+        <div class="sidebar">
+            <h3>Unscheduled Services</h3>
+            <div id="unscheduled-events"></div>
+        </div>
+        <div class="main-content">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Event details will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<button id="save-schedule-btn" class="btn btn-primary">Save Schedule</button>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function initializeSelect2(selector, placeholder) {
+        var $select = $(selector);
+        
+        $select.select2({
+            placeholder: placeholder,
+            allowClear: false
+        });
+
+        // Select the first option by default
+        var firstOptionValue = $select.find('option:first').val();
+        $select.val(firstOptionValue).trigger('change');
+
+        return $select;
+    }
+
+    var $caregiverSelect = initializeSelect2('#caregiver-select', 'Select a Caregiver');
+
+    const unscheduledEventsContainer = document.getElementById('unscheduled-events');
+    const saveScheduleBtn = document.getElementById('save-schedule-btn');
+    let currentServices = new Set();
+
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridDay',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridDay,timeGridWeek,dayGridMonth,listMonth'
+            },
+            editable: true,
+            droppable: true,
+            slotDuration: '00:30:00',
+            allDaySlot: false,
+            eventDidMount: function(info) {
+                $(info.el).tooltip({
+                    title: info.event.title,
+                    placement: 'top',
+                    trigger: 'hover',
+                    container: 'body'
+                });
+            },
+            eventClick: function(info) {
+                var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+                var modalBody = document.getElementById('eventModalBody');
+                modalBody.innerHTML = `
+                    <p><strong>Title:</strong> ${info.event.title}</p>
+                    <p><strong>Start:</strong> ${info.event.start.toLocaleString()}</p>
+                    <p><strong>End:</strong> ${info.event.end ? info.event.end.toLocaleString() : 'N/A'}</p>
+                `;
+                modal.show();
+            },
+            eventDrop: function(info) {
+                updateEventTime(info.event);
+            },
+            eventResize: function(info) {
+                updateEventTime(info.event);
+            },
+            eventReceive: function(info) {
+                const serviceId = info.draggedEl.dataset.serviceId;
+                const duration = parseFloat(info.draggedEl.dataset.duration);
+                const startTime = info.event.start;
+                const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
+
+                scheduleService(serviceId, startTime, endTime, info.event);
+            },
+            eventDragStop: function(info) {
+                var event = info.event;
+                var jsEvent = info.jsEvent;
+                
+                var calendarRect = calendarEl.getBoundingClientRect();
+                if (jsEvent.clientX < calendarRect.left || jsEvent.clientX > calendarRect.right ||
+                    jsEvent.clientY < calendarRect.top || jsEvent.clientY > calendarRect.bottom) {
+                    
+                    if (confirm('Are you sure you want to unschedule this service?')) {
+                        unscheduleService(event);
+                    } else {
+                        info.revert();
+                    }
+                }
+            },
+            datesSet: function(dateInfo) {
+                loadUnscheduledServices(dateInfo.start);
+            },
+            events: function(info, successCallback, failureCallback) {
+                fetchEvents(info, successCallback, failureCallback);
+            },
+        });
+        calendar.render();
+
+        $caregiverSelect.on('change', function() {
+            calendar.refetchEvents();
+        });
+
+        function fetchEvents(info, successCallback, failureCallback) {
+            var selectedCaregiver = $caregiverSelect.val();
+
+            $.ajax({
+                url: '{% url "get_events" %}',
+                data: {
+                    start: info.startStr,
+                    end: info.endStr,
+                    caregiver: selectedCaregiver,
+                },
+                success: function(data) {
+                    currentServices = new Set(data.map(event => event.id.toString()));
+                    successCallback(data);
+                    loadUnscheduledServices(calendar.getDate());
+                },
+                error: function() {
+                    failureCallback();
+                }
+            });
+        }
+
+        function unscheduleService(event) {
+            fetch('{% url "unschedule_service" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    service_id: event.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    event.remove();
+                    currentServices.delete(event.id);
+                    loadUnscheduledServices(calendar.getDate());
+                } else {
+                    alert('Error unscheduling service: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while unscheduling the service.');
+            });
+        }
+
+        function loadUnscheduledServices(date) {
+            var selectedCaregiver = $caregiverSelect.val();
+            fetch(`{% url 'get_unscheduled_services' %}?date=${date.toISOString().split('T')[0]}&caregiver=${selectedCaregiver}`)
+                .then(response => response.json())
+                .then(services => {
+                    unscheduledEventsContainer.innerHTML = '';
+                    services.forEach(service => {
+                        if (!currentServices.has(service.id.toString())) {
+                            const serviceElement = createUnscheduledServiceElement(service);
+                            unscheduledEventsContainer.appendChild(serviceElement);
+                        }
+                    });
+                    initializeSortable();
+                });
+        }
+
+        function updateEventTime(event) {
+            fetch('{% url "update_service" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    id: event.id,
+                    start: event.start.toISOString(),
+                    end: event.end.toISOString()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    alert('Error updating service: ' + data.message);
+                    calendar.refetchEvents();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the service.');
+                calendar.refetchEvents();
+            });
+        }
+
+        function scheduleService(serviceId, startTime, endTime, tempEvent) {
+            const caregiverId = $caregiverSelect.val();
+            
+            fetch('{% url "create_service" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    unscheduled_service_id: serviceId,
+                    start: startTime.toISOString(),
+                    end: endTime.toISOString(),
+                    caregiver_id: caregiverId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tempEvent.remove();
+                    calendar.addEvent({
+                        id: data.id,
+                        title: data.title,
+                        start: data.start,
+                        end: data.end,
+                        color: data.color,
+                        extendedProps: {
+                            ...data.extendedProps,
+                            caregiver_id: caregiverId
+                        }
+                    });
+                    currentServices.add(data.id.toString());
+                    loadUnscheduledServices(calendar.getDate());
+                } else {
+                    alert('Error scheduling service: ' + data.message);
+                    tempEvent.remove();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while scheduling the service.');
+                tempEvent.remove();
+            });
+        }
+
+        function createUnscheduledServiceElement(service) {
+            const serviceElement = document.createElement('div');
+            serviceElement.className = 'unscheduled-event fc-event fc-h-event fc-daygrid-event fc-daygrid-block-event';
+            serviceElement.innerHTML = `<div class="fc-event-main">${service.title} (${service.duration} hours)</div>`;
+            serviceElement.dataset.serviceId = service.id;
+            serviceElement.dataset.duration = service.duration;
+            serviceElement.dataset.title = service.title;
+            
+            new FullCalendar.Draggable(serviceElement, {
+                eventData: function() {
+                    return {
+                        title: service.title,
+                        duration: `PT${service.duration}H`
+                    };
+                }
+            });
+
+            return serviceElement;
+        }
+
+        saveScheduleBtn.addEventListener('click', function() {
+            const caregiverId = $caregiverSelect.val();
+            
+            if (!caregiverId) {
+                alert('Please select a caregiver before saving the schedule.');
+                return;
+            }
+
+            const scheduledServices = calendar.getEvents().map(event => ({
+                id: event.id,
+                start: event.start.toISOString(),
+                end: event.end.toISOString(),
+                caregiver_id: caregiverId
+            }));
+
+            fetch('{% url "save_schedule" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    date: calendar.getDate().toISOString().split('T')[0],
+                    services: scheduledServices
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Schedule saved successfully!');
+                    calendar.refetchEvents();
+                } else {
+                    alert('Error saving schedule: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the schedule.');
+            });
+        });
+
+        // Initial load of unscheduled services
+        loadUnscheduledServices(calendar.getDate());
+    } else {
+        console.error('Calendar element not found');
+    }
+});
+</script>
+{% endblock %}

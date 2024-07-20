@@ -3,43 +3,53 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-    <div data-aos="fade-up">
-        <h2 class="mb-4">Dashboard</h2>
-    </div>
+<div class="container mt-4">
+    <h1 class="mb-4">Dashboard</h1>
 
     <div class="row">
-        <div class="col-md-6" data-aos="fade-right">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3 class="card-title">Recent Services</h3>
+                    <h2 class="card-title">{{ current_month }}</h2>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
-                        {% for service in recent_services %}
-                            <li class="list-group-item">{{ service.service_type }} for {{ service.resident }} - {{ service.scheduled_time }}</li>
-                        {% empty %}
-                            <li class="list-group-item">No recent services.</li>
-                        {% endfor %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Services Due
+                            <span class="badge bg-primary rounded-pill">{{ current_month_due }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Services Completed
+                            <span class="badge bg-success rounded-pill">{{ current_month_completed }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Services Refused
+                            <span class="badge bg-danger rounded-pill">{{ current_month_refused }}</span>
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6" data-aos="fade-left">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3 class="card-title">Upcoming Services</h3>
+                    <h2 class="card-title">{{ next_month }}</h2>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
-                        {% for service in upcoming_services %}
-                            <li class="list-group-item">{{ service.service_type }} for {{ service.resident }} - {{ service.scheduled_time }}</li>
-                        {% empty %}
-                            <li class="list-group-item">No upcoming services.</li>
-                        {% endfor %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Services Due
+                            <span class="badge bg-primary rounded-pill">{{ next_month_due }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Hours Due
+                            <span class="badge bg-info rounded-pill">{{ next_month_hours_due }}</span>
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
