@@ -129,7 +129,7 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
-        return Service.objects.filter(resident=self.resident).order_by('scheduled_time')
+        return Service.objects.filter(resident=self.resident).order_by('due_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

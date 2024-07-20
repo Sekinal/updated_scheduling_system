@@ -6,11 +6,23 @@ from django.contrib.auth.models import User
 import json
 from .models import ResidentServiceFrequency, ServiceType
 import calendar
+from django.utils import timezone
 
 class ResidentServiceFrequencyForm(forms.ModelForm):
+    DAYS_OF_WEEK = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+    preferred_days = forms.MultipleChoiceField(choices=DAYS_OF_WEEK, widget=forms.CheckboxSelectMultiple, required=False)
+
     class Meta:
         model = ResidentServiceFrequency
-        fields = ['service_type', 'period', 'frequency', 'start_date', 'end_date']
+        fields = ['service_type', 'period', 'frequency', 'start_date', 'end_date', 'preferred_days']
         widgets = {
             'start_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -20,6 +32,18 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
         self.fields['end_date'].required = False
+        if self.instance.pk:
+            self.fields['preferred_days'].initial = json.loads(self.instance.preferred_days)
+
+    def clean_preferred_days(self):
+        return json.dumps([int(day) for day in self.cleaned_data['preferred_days']])
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.preferred_days = self.cleaned_data['preferred_days']
+        if commit:
+            instance.save()
+        return instance
     
 class ServiceTypeForm(forms.ModelForm):
     class Meta:
@@ -32,9 +56,11 @@ class ServiceTypeForm(forms.ModelForm):
 class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
-        fields = ['resident', 'service_type', 'caregiver', 'scheduled_time', 'status', 'completion_reason', 'reschedule_reason', 'completion_notes']
+        fields = ['resident', 'service_type', 'caregiver', 'scheduled_time', 'end_time', 'status', 'completion_reason', 'reschedule_reason', 'completion_notes', 'due_date']
         widgets = {
             'scheduled_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
             'completion_notes': forms.Textarea(attrs={'rows': 3}),
         }
 
@@ -44,12 +70,26 @@ class ServiceForm(forms.ModelForm):
         self.fields['reschedule_reason'].required = False
         self.fields['completion_notes'].required = False
         self.fields['resident'].widget.attrs['readonly'] = True
+        self.fields['scheduled_time'].required = False
+        self.fields['end_time'].required = False
+        self.fields['caregiver'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
         status = cleaned_data.get('status')
         completion_reason = cleaned_data.get('completion_reason')
         reschedule_reason = cleaned_data.get('reschedule_reason')
+        scheduled_time = cleaned_data.get('scheduled_time')
+        end_time = cleaned_data.get('end_time')
+        caregiver = cleaned_data.get('caregiver')
+
+        if status == 'scheduled':
+            if not scheduled_time:
+                self.add_error('scheduled_time', "Scheduled time is required for scheduled services.")
+            if not end_time:
+                self.add_error('end_time', "End time is required for scheduled services.")
+            if not caregiver:
+                self.add_error('caregiver', "Caregiver is required for scheduled services.")
 
         if status == 'completed':
             if not completion_reason:
@@ -74,6 +114,10 @@ class ServiceForm(forms.ModelForm):
     def save(self, commit=True):
         service = super().save(commit=False)
         
+        if service.status == 'scheduled' and not service.scheduled_time:
+            service.scheduled_time = timezone.now()
+            service.end_time = service.scheduled_time + service.service_type.duration
+
         if service.status == 'refused':
             service.mark_as_refused()
         elif service.status == 'not_completed':
