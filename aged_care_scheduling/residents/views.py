@@ -39,9 +39,9 @@ class ResidentCreateView(LoginRequiredMixin, CreateView):
         # Check if the resident is associated with a care home
         if 'care_home_id' in self.request.POST:
             care_home_id = self.request.POST['care_home_id']
-            return reverse('care_homes:home_detail', kwargs={'pk': care_home_id})
+            return reverse('residents:resident_detail', kwargs={'pk': care_home_id})
         else:
-            return reverse('care_homes:home_list')
+            return reverse('residents:resident_list')
 
 class ResidentUpdateView(LoginRequiredMixin, UpdateView):
     model = Resident
@@ -72,7 +72,6 @@ class ResidentDashboardView(DetailView):
     template_name = 'resident/resident_dashboard.html'
     context_object_name = 'resident'
 
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         resident = self.object
@@ -82,7 +81,7 @@ class ResidentDashboardView(DetailView):
             {
                 'id': sf.id,
                 'service_type': sf.service_type,
-                'period': sf.period,
+                'period': sf.recurrence_pattern,
                 'frequency': sf.frequency,
                 'start_date': sf.start_date,
                 'end_date': sf.end_date,
@@ -92,7 +91,7 @@ class ResidentDashboardView(DetailView):
         
         # Form for adding new service frequency
         context['service_frequency_form'] = ResidentServiceFrequencyForm(resident=resident)
-        
+                
         # Visit history (completed, rescheduled, or not completed services)
         visit_history = Service.objects.filter(
             resident=resident,
@@ -123,7 +122,7 @@ class ResidentDashboardView(DetailView):
             messages.success(request, 'Service frequency added successfully.')
         else:
             messages.error(request, 'Error adding service frequency. Please check the form.')
-        return redirect('residents:resident_dashboard', pk=resident.pk)    
+        return redirect('residents:resident_dashboard', pk=resident.pk)
 
 class ResidentListView(ListView):
     model = Resident
@@ -178,7 +177,7 @@ class DeleteAllServicesView(LoginRequiredMixin, View):
     
 class ServiceFrequencyUpdateView(UpdateView):
     model = ResidentServiceFrequency
-    fields = ['frequency', 'period']
+    fields = ['frequency', 'recurrence_pattern']
     template_name = 'resident/service_frequency_form.html'
 
     def get_success_url(self):

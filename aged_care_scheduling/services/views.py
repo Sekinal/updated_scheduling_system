@@ -264,14 +264,16 @@ def delete_service_frequency(request, pk):
 def add_service_frequency(request, resident_id):
     resident = get_object_or_404(Resident, pk=resident_id)
     if request.method == 'POST':
-        form = ResidentServiceFrequencyForm(request.POST, resident_id=resident_id)
+        form = ResidentServiceFrequencyForm(request.POST, resident=resident)
         if form.is_valid():
-            service_frequency = form.save()
-            service_frequency.create_services()  # Create the actual service instances
-            messages.success(request, f"Service frequency added successfully for {resident.full_name}")
+            service_frequency = form.save(commit=False)
+            service_frequency.resident = resident
+            service_frequency.save()
+            service_frequency.create_services()
+            messages.success(request, f"Service frequency added successfully for {resident.first_name} {resident.last_name}")
             return redirect(reverse('residents:resident_dashboard', kwargs={'pk': resident_id}))
     else:
-        form = ResidentServiceFrequencyForm(resident_id=resident_id)
+        form = ResidentServiceFrequencyForm(resident=resident)
     
     context = {
         'form': form,

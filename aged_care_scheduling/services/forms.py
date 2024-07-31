@@ -44,12 +44,11 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        resident = kwargs.pop('resident', None)
+        self.resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
-        self.fields['end_date'].required = False
-        self.fields['occurrences'].required = False
-        if self.instance.pk:
-            self.fields['preferred_days'].initial = json.loads(self.instance.preferred_days)
+        if self.resident:
+            self.fields['resident'].initial = self.resident
+            self.fields['resident'].widget = forms.HiddenInput()
 
     def clean_preferred_days(self):
         return json.dumps([int(day) for day in self.cleaned_data['preferred_days']])
