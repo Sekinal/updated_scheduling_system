@@ -1,36 +1,83 @@
-<!-- add_service_frequency.html -->
-
 {% extends 'base.html' %}
 
-{% block title %}Add Service Frequency{% endblock %}
-
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Add Service Frequency for {{ resident.first_name }} {{ resident.last_name }}</h1>
+<div class="container mt-4">
+    <h2>Add Service Frequency for {{ resident.first_name }} {{ resident.last_name }}</h2>
     <form method="post">
         {% csrf_token %}
+        {{ form.non_field_errors }}
         <div class="mb-3">
             <label for="{{ form.service_type.id_for_label }}" class="form-label">Service Type</label>
             {{ form.service_type }}
+            {{ form.service_type.errors }}
         </div>
         <div class="mb-3">
-            <label for="{{ form.period.id_for_label }}" class="form-label">Frequency</label>
-            {{ form.period }}
+            <label for="{{ form.recurrence_pattern.id_for_label }}" class="form-label">Recurrence Pattern</label>
+            {{ form.recurrence_pattern }}
+            {{ form.recurrence_pattern.errors }}
         </div>
         <div class="mb-3">
             <label for="{{ form.frequency.id_for_label }}" class="form-label">Frequency</label>
             {{ form.frequency }}
+            {{ form.frequency.errors }}
         </div>
         <div class="mb-3">
-            <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date (optional)</label>
-            {{ form.end_date }}
+            <label class="form-label">Preferred Days</label>
+            {{ form.preferred_days }}
+            {{ form.preferred_days.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.start_time.id_for_label }}" class="form-label">Start Time</label>
+            {{ form.start_time }}
+            {{ form.start_time.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.end_time.id_for_label }}" class="form-label">End Time</label>
+            {{ form.end_time }}
+            {{ form.end_time.errors }}
         </div>
         <div class="mb-3">
             <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
             {{ form.start_date }}
+            {{ form.start_date.errors }}
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Recurrence End</label>
+            {{ form.recurrence_end }}
+            {{ form.recurrence_end.errors }}
+        </div>
+        <div class="mb-3" id="occurrences_field" style="display: none;">
+            <label for="{{ form.occurrences.id_for_label }}" class="form-label">Number of Occurrences</label>
+            {{ form.occurrences }}
+            {{ form.occurrences.errors }}
+        </div>
+        <div class="mb-3" id="end_date_field" style="display: none;">
+            <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
+            {{ form.end_date }}
+            {{ form.end_date.errors }}
         </div>
         <button type="submit" class="btn btn-primary">Add Service Frequency</button>
-        <a href="{% url 'residents:resident_dashboard' resident.pk %}" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const recurrenceEndRadios = document.querySelectorAll('input[name="recurrence_end"]');
+        const occurrencesField = document.getElementById('occurrences_field');
+        const endDateField = document.getElementById('end_date_field');
+
+        function updateVisibility() {
+            const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
+            occurrencesField.style.display = selectedValue === 'after' ? 'block' : 'none';
+            endDateField.style.display = selectedValue === 'on_date' ? 'block' : 'none';
+        }
+
+        recurrenceEndRadios.forEach(radio => {
+            radio.addEventListener('change', updateVisibility);
+        });
+
+        // Initial visibility update
+        updateVisibility();
+    });
+</script>
 {% endblock %}

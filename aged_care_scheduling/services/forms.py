@@ -13,6 +13,7 @@ from .models import ResidentServiceFrequency, ServiceType
 import calendar
 from django.utils import timezone
 
+
 class ResidentServiceFrequencyForm(forms.ModelForm):
     DAYS_OF_WEEK = [
         (0, 'Monday'),
@@ -24,18 +25,18 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         (6, 'Sunday'),
     ]
     preferred_days = forms.MultipleChoiceField(choices=DAYS_OF_WEEK, widget=forms.CheckboxSelectMultiple, required=False)
-    duration = forms.DurationField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     
     RECURRENCE_END_CHOICES = [
         ('never', 'Never'),
         ('after', 'After'),
+        ('on_date', 'On Date'),
     ]
-    recurrence_end = forms.ChoiceField(choices=RECURRENCE_END_CHOICES, initial='never')
+    recurrence_end = forms.ChoiceField(choices=RECURRENCE_END_CHOICES, initial='never', widget=forms.RadioSelect)
     occurrences = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = ResidentServiceFrequency
-        fields = ['resident', 'service_type', 'recurrence_pattern', 'frequency', 'preferred_days', 'start_time', 'end_time', 'start_date', 'end_date', 'duration', 'recurrence_end', 'occurrences']
+        fields = ['resident', 'service_type', 'recurrence_pattern', 'frequency', 'preferred_days', 'start_time', 'end_time', 'start_date', 'recurrence_end', 'occurrences', 'end_date']
         widgets = {
             'start_time': forms.TimeInput(attrs={'type': 'time'}),
             'end_time': forms.TimeInput(attrs={'type': 'time'}),
@@ -46,60 +47,33 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
-        if self.resident:
-            self.fields['resident'].initial = self.resident
-            self.fields['resident'].widget = forms.HiddenInput()
-
-    def clean_preferred_days(self):
-        return json.dumps([int(day) for day in self.cleaned_data['preferred_days']])
+        self.fields['service_type'].queryset = ServiceType.objects.all()
 
     def clean(self):
         cleaned_data = super().clean()
-        service_type = cleaned_data.get('service_type')
-        start_time = cleaned_data.get('start_time')
         recurrence_end = cleaned_data.get('recurrence_end')
         occurrences = cleaned_data.get('occurrences')
-
-        if service_type:
-            duration = service_type.duration
-            cleaned_data['duration'] = duration
-
-            if start_time:
-                end_time = (datetime.combine(timezone.now().date(), start_time) + duration).time()
-                cleaned_data['end_time'] = end_time
+        end_date = cleaned_data.get('end_date')
 
         if recurrence_end == 'after' and not occurrences:
             self.add_error('occurrences', 'Please specify the number of occurrences.')
+        elif recurrence_end == 'on_date' and not end_date:
+            self.add_error('end_date', 'Please specify an end date.')
 
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.preferred_days = self.cleaned_data['preferred_days']
-
-        recurrence_end = self.cleaned_data['recurrence_end']
-        occurrences = self.cleaned_data['occurrences']
-
-        if recurrence_end == 'never':
-            instance.end_date = None
-        elif recurrence_end == 'after' and occurrences:
-            # Calculate end_date based on occurrences
-            start_date = instance.start_date
-            frequency = instance.frequency
-            recurrence_pattern = instance.recurrence_pattern
-
-            if recurrence_pattern == 'daily':
-                instance.end_date = start_date + timedelta(days=frequency * occurrences)
-            elif recurrence_pattern == 'weekly':
-                instance.end_date = start_date + timedelta(weeks=frequency * occurrences)
-            elif recurrence_pattern == 'monthly':
-                instance.end_date = start_date + relativedelta(months=frequency * occurrences)
-            elif recurrence_pattern == 'yearly':
-                instance.end_date = start_date + relativedelta(years=frequency * occurrences)
-
+        instance.resident = self.resident
+        
         if commit:
             instance.save()
+            
+            # Create services based on the frequency settings
+            instance.create_services()
+        
         return instance
+
 class ServiceTypeForm(forms.ModelForm):
     class Meta:
         model = ServiceType

@@ -7,6 +7,8 @@ from services.models import Service, ServiceType, ResidentServiceFrequency
 from django.db.models import Count
 from django.utils import timezone
 from django.contrib import messages
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q
 
@@ -120,9 +122,13 @@ class ResidentDashboardView(DetailView):
             service_frequency.resident = resident
             service_frequency.save()
             messages.success(request, 'Service frequency added successfully.')
+            
+            # Return updated service frequencies list
+            service_frequencies = ResidentServiceFrequency.objects.filter(resident=resident)
+            html = render_to_string('resident/service_frequency_list.html', {'service_frequencies': service_frequencies})
+            return JsonResponse({'success': True, 'html': html})
         else:
-            messages.error(request, 'Error adding service frequency. Please check the form.')
-        return redirect('residents:resident_dashboard', pk=resident.pk)
+            return JsonResponse({'success': False, 'errors': form.errors})
 
 class ResidentListView(ListView):
     model = Resident

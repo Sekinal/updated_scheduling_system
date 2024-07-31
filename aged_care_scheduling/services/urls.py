@@ -27,4 +27,5 @@ urlpatterns = [
     path('edit-service-frequency/<int:pk>/', views.edit_service_frequency, name='edit_service_frequency'),
     path('delete-service-frequency/<int:pk>/', views.delete_service_frequency, name='delete_service_frequency'),
     path('add-service-frequency/<int:resident_id>/', views.add_service_frequency, name='add_service_frequency'),
+    path('resident/<int:resident_id>/add-service-frequency/', views.add_service_frequency, name='add_service_frequency'),
 ]

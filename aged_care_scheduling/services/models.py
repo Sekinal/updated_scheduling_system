@@ -241,6 +241,12 @@ class ResidentServiceFrequency(models.Model):
         ('monthly', 'Monthly'),
         ('yearly', 'Yearly'),
     ]
+    
+    RECURRENCE_END_CHOICES = [
+        ('never', 'Never'),
+        ('after', 'After'),
+        ('on_date', 'On Date'),
+    ]
 
     resident = models.ForeignKey('residents.Resident', on_delete=models.CASCADE, related_name='service_frequencies')
     service_type = models.ForeignKey('ServiceType', on_delete=models.CASCADE)
@@ -250,6 +256,8 @@ class ResidentServiceFrequency(models.Model):
     start_time = models.TimeField(null=True)
     end_time = models.TimeField(null=True)
     start_date = models.DateField(default=timezone.now)
+    recurrence_end = models.CharField(max_length=10, choices=RECURRENCE_END_CHOICES, default='never')
+    occurrences = models.PositiveIntegerField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     id = models.AutoField(primary_key=True)
 
@@ -277,10 +285,11 @@ class ResidentServiceFrequency(models.Model):
     def create_services(self):
         from .models import Service  # Import here to avoid circular import
         
-        end_date = self.end_date or (timezone.now().date() + timedelta(days=365))  # Schedule for a year if no end date
         current_date = self.start_date
+        end_date = self.end_date
+        occurrences = 0
 
-        while current_date <= end_date:
+        while True:
             if self.should_create_service(current_date):
                 Service.objects.create(
                     resident=self.resident,
@@ -291,7 +300,20 @@ class ResidentServiceFrequency(models.Model):
                     end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
                     frequency_id=self.id
                 )
+                occurrences += 1
 
+            # Check if we should stop creating services
+            if self.recurrence_end == 'never':
+                if current_date >= timezone.now().date() + timedelta(days=365):  # Limit to 1 year in advance
+                    break
+            elif self.recurrence_end == 'after':
+                if occurrences >= self.occurrences:
+                    break
+            elif self.recurrence_end == 'on_date':
+                if current_date >= self.end_date:
+                    break
+
+            # Move to the next date based on recurrence pattern
             if self.recurrence_pattern == 'daily':
                 current_date += timedelta(days=self.frequency)
             elif self.recurrence_pattern == 'weekly':
@@ -300,6 +322,10 @@ class ResidentServiceFrequency(models.Model):
                 current_date += relativedelta(months=self.frequency)
             elif self.recurrence_pattern == 'yearly':
                 current_date += relativedelta(years=self.frequency)
+
+            # Safety check to prevent infinite loop
+            if current_date > timezone.now().date() + timedelta(days=365*10):  # 10 years in the future
+                break
 
     def should_create_service(self, date):
         preferred_days = json.loads(self.preferred_days)
