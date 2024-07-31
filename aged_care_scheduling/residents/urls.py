@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import ResidentDetailView, ResidentCreateView, ResidentUpdateView, ResidentDeleteView, ResidentDashboardView, ResidentServiceListView, DeleteAllServicesView, ServiceFrequencyUpdateView, ServiceFrequencyDeleteView
+from .views import ResidentListView, ResidentDetailView, ResidentCreateView, ResidentUpdateView, ResidentDeleteView, ResidentDashboardView, ResidentServiceListView, DeleteAllServicesView, ServiceFrequencyUpdateView, ServiceFrequencyDeleteView
 
 app_name = "residents"
 
 urlpatterns = [
+    path('', ResidentListView.as_view(), name='resident_list'),
     path('<int:pk>/', ResidentDetailView.as_view(), name='resident_detail'),
     path('new/', ResidentCreateView.as_view(), name='resident_create'),
     path('<int:pk>/edit/', ResidentUpdateView.as_view(), name='resident_update'),

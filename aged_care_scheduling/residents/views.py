@@ -8,6 +8,8 @@ from django.db.models import Count
 from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Q
+
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.core.paginator import Paginator
@@ -122,6 +124,31 @@ class ResidentDashboardView(DetailView):
         else:
             messages.error(request, 'Error adding service frequency. Please check the form.')
         return redirect('residents:resident_dashboard', pk=resident.pk)    
+
+class ResidentListView(ListView):
+    model = Resident
+    template_name = 'resident/resident_list.html'
+    context_object_name = 'residents'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(date_of_birth__icontains=search_query) |
+                Q(admission_date__icontains=search_query) |
+                Q(care_home__name__icontains=search_query)
+            )
+        return queryset.order_by('last_name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
+
 class ResidentServiceListView(LoginRequiredMixin, ListView):
     model = Service
     template_name = 'services/resident_service_list.html'

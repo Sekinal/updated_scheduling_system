@@ -66,6 +66,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'resident_list' %}active{% endif %}" href="{% url 'residents:resident_list' %}">
+                            <i class="fas fa-users"></i> Residents
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'blocked_times' %}active{% endif %}" href="{% url 'blocked_time_list' %}">
                             <i class="fas fa-calendar-alt"></i> Blocked Times
                         </a>

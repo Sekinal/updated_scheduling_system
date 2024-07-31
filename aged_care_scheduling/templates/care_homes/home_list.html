@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Care Homes & Residents{% endblock %}
+{% block title %}Care Homes{% endblock %}
 
 {% block content %}
 <div data-aos="fade-up">
@@ -75,68 +75,6 @@
 
     {% if user.is_staff %}
         <a href="{% url 'care_homes:home_add' %}" class="btn btn-success">Add New Care Home</a>
-    {% endif %}
-</div>
-
-<div data-aos="fade-up" class="mt-5">
-    <h2>Residents</h2>
-
-    {% if residents %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Date of Birth</th>
-                    <th>Admission Date</th>
-                    <th>Care Home</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for resident in residents %}
-                    <tr>
-                        <td><a href="{% url 'residents:resident_detail' resident.pk %}">{{ resident.first_name }} {{ resident.last_name }}</a></td>
-                        <td>{{ resident.date_of_birth }}</td>
-                        <td>{{ resident.admission_date }}</td>
-                        <td><a href="{% url 'care_homes:home_detail' resident.care_home.pk %}">{{ resident.care_home.name }}</a></td>
-                        <td>
-                            <a href="{% url 'residents:resident_dashboard' resident.pk %}" class="btn btn-sm btn-info">Dashboard</a>
-                            <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-sm btn-primary">Edit</a>
-                            <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                            <a href="{% url 'resident_service_list' resident.pk %}" class="btn btn-sm btn-success">Services</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        {% if residents.has_other_pages %}
-            <nav>
-                <ul class="pagination">
-                    {% if residents.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?residents_page={{ residents.previous_page_number }}&search={{ search_query }}">Previous</a></li>
-                    {% endif %}
-
-                    {% for i in residents.paginator.page_range %}
-                        {% if residents.number == i %}
-                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                        {% else %}
-                            <li class="page-item"><a class="page-link" href="?residents_page={{ i }}&search={{ search_query }}">{{ i }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if residents.has_next %}
-                        <li class="page-item"><a class="page-link" href="?residents_page={{ residents.next_page_number }}&search={{ search_query }}">Next</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
-    {% else %}
-        <p>No residents found.</p>
-    {% endif %}
-
-    {% if user.is_staff %}
-        <a href="{% url 'residents:resident_create' %}" class="btn btn-success">Add New Resident</a>
     {% endif %}
 </div>
 {% endblock %}
