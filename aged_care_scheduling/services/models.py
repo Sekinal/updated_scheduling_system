@@ -5,11 +5,17 @@ from django.core.exceptions import ValidationError
 from residents.models import Resident
 from django.utils import timezone
 from datetime import timedelta
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils import timezone
+from datetime import timedelta
+import json
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from datetime import datetime
+import uuid
 import calendar
 from dateutil.relativedelta import relativedelta
 import json
@@ -58,6 +64,7 @@ class Service(models.Model):
     refusal_count = models.PositiveIntegerField(default=0)
     last_refusal_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True)
+    frequency_id = models.UUIDField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.scheduled_time and self.status == 'unscheduled':
@@ -227,88 +234,112 @@ class Service(models.Model):
     def __str__(self):
         return f"{self.service_type} for {self.resident} due on {self.due_date}"
 
-from django.db import models
-from django.core.validators import MinValueValidator
-from django.utils import timezone
-from datetime import timedelta
-import json
-
 class ResidentServiceFrequency(models.Model):
-    PERIOD_CHOICES = [
+    RECURRENCE_CHOICES = [
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
         ('monthly', 'Monthly'),
+        ('yearly', 'Yearly'),
     ]
 
     resident = models.ForeignKey('residents.Resident', on_delete=models.CASCADE, related_name='service_frequencies')
     service_type = models.ForeignKey('ServiceType', on_delete=models.CASCADE)
-    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, null=True)
+    recurrence_pattern = models.CharField(max_length=10, choices=RECURRENCE_CHOICES, null=True)
     frequency = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
-    start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField(null=True, blank=True)
     preferred_days = models.CharField(max_length=100, default='[]')  # Store as JSON string
-
-    class Meta:
-        unique_together = ('resident', 'service_type', 'start_date')
+    start_time = models.TimeField(null=True)
+    end_time = models.TimeField(null=True)
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField(null=True, blank=True)
+    id = models.AutoField(primary_key=True)
 
     def __str__(self):
-        return f"{self.resident} - {self.service_type}: Every {self.frequency} {self.period} starting {self.start_date}"
+        return f"{self.resident} - {self.service_type}: Every {self.frequency} {self.recurrence_pattern} starting {self.start_date}"
+    
+    def clean(self):
+        # Check for overlapping schedules
+        overlapping = ResidentServiceFrequency.objects.filter(
+            resident=self.resident,
+            service_type=self.service_type,
+            start_date=self.start_date,
+        ).exclude(pk=self.pk)  # Exclude self when updating
+
+        for schedule in overlapping:
+            if (self.start_time < schedule.end_time and self.end_time > schedule.start_time):
+                raise ValidationError(
+                    f"This schedule overlaps with an existing schedule from {schedule.start_time} to {schedule.end_time}"
+                )
+                
+    def save(self, *args, **kwargs):
+        self.full_clean()  # This calls clean() and validates model fields
+        super().save(*args, **kwargs)
 
     def create_services(self):
         from .models import Service  # Import here to avoid circular import
         
-        end_date = self.end_date or (self.start_date + relativedelta(years=1))
+        end_date = self.end_date or (timezone.now().date() + timedelta(days=365))  # Schedule for a year if no end date
         current_date = self.start_date
 
         while current_date <= end_date:
-            Service.objects.create(
-                resident=self.resident,
-                service_type=self.service_type,
-                status='unscheduled',
-                due_date=current_date
-            )
+            if self.should_create_service(current_date):
+                Service.objects.create(
+                    resident=self.resident,
+                    service_type=self.service_type,
+                    status='unscheduled',
+                    due_date=current_date,
+                    scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
+                    end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
+                    frequency_id=self.id
+                )
 
-            if self.period == 'daily':
+            if self.recurrence_pattern == 'daily':
                 current_date += timedelta(days=self.frequency)
-            elif self.period == 'weekly':
+            elif self.recurrence_pattern == 'weekly':
                 current_date += timedelta(weeks=self.frequency)
-            elif self.period == 'monthly':
+            elif self.recurrence_pattern == 'monthly':
                 current_date += relativedelta(months=self.frequency)
-            elif self.period == 'yearly':
+            elif self.recurrence_pattern == 'yearly':
                 current_date += relativedelta(years=self.frequency)
 
     def should_create_service(self, date):
-        if self.period == 'daily':
-            return (date - self.start_date.date()).days % self.frequency == 0
-        elif self.period == 'weekly':
-            return date.weekday() == self.start_date.weekday() and (date - self.start_date.date()).days // 7 % self.frequency == 0
-        elif self.period == 'monthly':
+        preferred_days = json.loads(self.preferred_days)
+        if preferred_days and date.weekday() not in preferred_days:
+            return False
+
+        if self.recurrence_pattern == 'daily':
+            return (date - self.start_date).days % self.frequency == 0
+        elif self.recurrence_pattern == 'weekly':
+            return (date - self.start_date).days % (7 * self.frequency) == 0
+        elif self.recurrence_pattern == 'monthly':
             return date.day == self.start_date.day and (date.year - self.start_date.year) * 12 + date.month - self.start_date.month % self.frequency == 0
+        elif self.recurrence_pattern == 'yearly':
+            return date.month == self.start_date.month and date.day == self.start_date.day and (date.year - self.start_date.year) % self.frequency == 0
         return False
 
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        if is_new:
-            self.create_services()
-
     def delete(self, *args, **kwargs):
-        self.delete_services()
+        # Delete all related services that haven't been completed
+        Service.objects.filter(
+            resident=self.resident,
+            service_type=self.service_type,
+            status__in=['unscheduled', 'scheduled'],
+            frequency_id=self.id
+        ).delete()
         super().delete(*args, **kwargs)
+
+    def update_services(self):
+        self.delete_services()
+        self.create_services()
 
     def delete_services(self):
         from .models import Service  # Import here to avoid circular import
         Service.objects.filter(
             resident=self.resident,
             service_type=self.service_type,
-            status='unscheduled',
-            due_date__gte=self.start_date.date(),
-            due_date__lte=self.end_date.date() if self.end_date else timezone.now().date() + timedelta(days=180)
+            status='scheduled',
+            due_date__gte=self.start_date,
+            due_date__lte=self.end_date or timezone.now().date() + timedelta(days=365)
         ).delete()
 
-    def update_services(self):
-        self.delete_services()
-        self.create_services()
 
 class Escalation(models.Model):
     ESCALATION_TYPES = (
@@ -342,8 +373,8 @@ class ResidentPreference(models.Model):
         return f"Preference for {self.resident} - {self.service_type}"
 
 class BlockedTime(models.Model):
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    start_time = models.DateTimeField(null=True)
+    end_time = models.DateTimeField(null=True)
     reason = models.CharField(max_length=100)
 
     def __str__(self):

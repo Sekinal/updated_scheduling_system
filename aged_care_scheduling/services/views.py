@@ -6,7 +6,9 @@ from django.contrib import messages
 from .models import Service, ServiceType, ResidentPreference, BlockedTime, Escalation
 from .forms import ServiceTypeForm, ServiceForm, ResidentPreferenceForm, BlockedTimeForm, EscalationForm
 from residents.models import Resident
+from django.urls import reverse
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q
 from django.db import transaction
@@ -233,32 +235,46 @@ def edit_service_frequency(request, pk):
     if request.method == 'POST':
         form = ResidentServiceFrequencyForm(request.POST, instance=service_frequency, resident=service_frequency.resident)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Service frequency updated successfully.')
+            service_frequency = form.save()
+            
+            # Delete existing future services
+            Service.objects.filter(
+                resident=service_frequency.resident,
+                service_type=service_frequency.service_type,
+                status__in=['unscheduled', 'scheduled'],
+                due_date__gte=timezone.now().date()
+            ).delete()
+            
+            # Create new services based on updated frequency
+            service_frequency.create_services()
+            
+            messages.success(request, 'Service frequency updated successfully and services rescheduled.')
             return redirect('residents:resident_dashboard', pk=service_frequency.resident.pk)
     else:
         form = ResidentServiceFrequencyForm(instance=service_frequency, resident=service_frequency.resident)
     
     return render(request, 'services/edit_service_frequency.html', {'form': form, 'service_frequency': service_frequency})
-
 def delete_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     resident_pk = service_frequency.resident.pk
-    service_frequency.delete()
-    messages.success(request, 'Service frequency deleted successfully.')
+    service_frequency.delete()  # This will now delete related services as well
+    messages.success(request, 'Service frequency and related uncompleted services deleted successfully.')
     return redirect('residents:resident_dashboard', pk=resident_pk)
 
 def add_service_frequency(request, resident_id):
     resident = get_object_or_404(Resident, pk=resident_id)
     if request.method == 'POST':
-        form = ResidentServiceFrequencyForm(request.POST, resident=resident)
+        form = ResidentServiceFrequencyForm(request.POST, resident_id=resident_id)
         if form.is_valid():
-            service_frequency = form.save(commit=False)
-            service_frequency.resident = resident
-            service_frequency.save()
-            messages.success(request, 'Service frequency added successfully.')
-            return redirect('residents:resident_dashboard', pk=resident.pk)
+            service_frequency = form.save()
+            service_frequency.create_services()  # Create the actual service instances
+            messages.success(request, f"Service frequency added successfully for {resident.full_name}")
+            return redirect(reverse('residents:resident_dashboard', kwargs={'pk': resident_id}))
     else:
-        form = ResidentServiceFrequencyForm(resident=resident)
+        form = ResidentServiceFrequencyForm(resident_id=resident_id)
     
-    return render(request, 'services/add_service_frequency.html', {'form': form, 'resident': resident})
+    context = {
+        'form': form,
+        'resident': resident,
+    }
+    return render(request, 'services/add_service_frequency.html', context)

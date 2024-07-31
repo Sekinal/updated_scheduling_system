@@ -1,31 +1,85 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+<style>
+  .service-card {
+    transition: all 0.3s ease;
+  }
+  .service-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-5px);
+  }
+  .status-icon {
+    font-size: 1.5rem;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
+<div class="container mt-4">
   <div data-aos="fade-up">
     <h2 class="mb-4">Services for {{ resident.first_name }} {{ resident.last_name }}</h2>
   </div>
-  <div data-aos="fade-up" data-aos-delay="200">
-    <a href="{% url 'residents:resident_dashboard' resident.id %}" class="btn btn-primary mb-3 me-2">Back to Dashboard</a>
-    <a href="{% url 'service_create' %}?resident_id={{ resident.id }}" class="btn btn-success mb-3">Add New Service</a>
+  
+  <div data-aos="fade-up" data-aos-delay="200" class="mb-4">
+    <a href="{% url 'residents:resident_dashboard' resident.id %}" class="btn btn-primary me-2">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+    <a href="{% url 'service_create' %}?resident_id={{ resident.id }}" class="btn btn-success">
+      <i class="fas fa-plus"></i> Add New Service
+    </a>
   </div>
+
   <div data-aos="fade-up" data-aos-delay="400">
-    <ul class="list-group">
-      {% for service in services %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <div>
-            <strong>{{ service.service_type }}</strong> at {{ service.scheduled_time }}
+    {% if services %}
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for service in services %}
+          <div class="col">
+            <div class="card service-card h-100">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{{ service.service_type }}</h5>
+                <span class="status-icon">
+                  {% if service.status == 'completed' %}
+                    <i class="fas fa-check-circle text-success" title="Completed"></i>
+                  {% elif service.status == 'scheduled' %}
+                    <i class="fas fa-clock text-primary" title="Scheduled"></i>
+                  {% elif service.status == 'unscheduled' %}
+                    <i class="fas fa-exclamation-circle text-warning" title="Unscheduled"></i>
+                  {% else %}
+                    <i class="fas fa-times-circle text-danger" title="{{ service.get_status_display }}"></i>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="card-body">
+                <p class="card-text">
+                  <strong>Scheduled:</strong> {% if service.scheduled_time %}{{ service.scheduled_time|date:"M d, Y h:i A" }}{% else %}Not yet scheduled{% endif %}<br>
+                  <strong>Due Date:</strong> {{ service.due_date|date:"M d, Y" }}<br>
+                  <strong>Caregiver:</strong> {{ service.caregiver|default:"Not assigned" }}<br>
+                  <strong>Status:</strong> <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }}">{{ service.get_status_display }}</span>
+                </p>
+              </div>
+              <div class="card-footer bg-transparent">
+                <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary me-1">
+                  <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary me-1">
+                  <i class="fas fa-sync-alt"></i> Update Status
+                </a>
+                <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger">
+                  <i class="fas fa-trash"></i> Delete
+                </a>
+              </div>
+            </div>
           </div>
-          <div>
-            <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }} me-2">{{ service.get_status_display }}</span>
-            <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
-            <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary me-2">Update Status</a>
-            <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
-          </div>
-        </li>
-      {% empty %}
-        <li class="list-group-item">No services scheduled.</li>
-      {% endfor %}
-    </ul>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info" role="alert">
+        <i class="fas fa-info-circle me-2"></i> No services scheduled for this resident.
+      </div>
+    {% endif %}
 
     {% if is_paginated %}
       <nav aria-label="Page navigation" class="mt-4">
@@ -65,4 +119,38 @@
       </nav>
     {% endif %}
   </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      var serviceTypeSelect = document.getElementById('id_service_type');
+      var durationInput = document.getElementById('id_duration');
+      var startTimeInput = document.getElementById('id_start_time');
+      var endTimeInput = document.getElementById('id_end_time');
+      var recurrenceEndSelect = document.getElementById('id_recurrence_end');
+      var occurrencesInput = document.getElementById('id_occurrences');
+
+      serviceTypeSelect.addEventListener('change', function() {
+          var selectedOption = this.options[this.selectedIndex];
+          var duration = selectedOption.getAttribute('data-duration');
+          durationInput.value = duration;
+          updateEndTime();
+      });
+
+      startTimeInput.addEventListener('change', updateEndTime);
+
+      function updateEndTime() {
+          if (startTimeInput.value && durationInput.value) {
+              var startTime = new Date('2000-01-01T' + startTimeInput.value);
+              var durationParts = durationInput.value.split(':');
+              var endTime = new Date(startTime.getTime() + (parseInt(durationParts[0]) * 3600000) + (parseInt(durationParts[1]) * 60000) + (parseInt(durationParts[2]) * 1000));
+              endTimeInput.value = endTime.toTimeString().slice(0, 5);
+          }
+      }
+
+      recurrenceEndSelect.addEventListener('change', function() {
+          occurrencesInput.disabled = (this.value === 'never');
+      });
+  });
+</script>
+
 {% endblock %}

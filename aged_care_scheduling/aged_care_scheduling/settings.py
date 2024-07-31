@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-s*xxr#q!%i(*&j0)-uyf3hdkemu08(xfj0gx&yzf(_svfqwp4e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['thermostatic.pythonanywhere.com', '127.0.0.1']
+ALLOWED_HOSTS = ['thermostatic.pythonanywhere.com', '127.0.0.1', 'localhost']
 
 
 # Application definition

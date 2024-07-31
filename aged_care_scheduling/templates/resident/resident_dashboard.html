@@ -50,7 +50,9 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span>
                                         {{ sf.service_type.name }}
-                                        <span class="badge bg-primary rounded-pill">Every {{ sf.frequency }} {{ sf.period }}</span>
+                                        <span class="badge bg-primary rounded-pill">
+                                            Every {{ sf.frequency }} {{ sf.recurrence_pattern }}
+                                        </span>
                                     </span>
                                     <span>
                                         <a href="{% url 'edit_service_frequency' sf.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
@@ -58,13 +60,14 @@
                                     </span>
                                 </div>
                                 <small class="text-muted">
-                                    Start Date: {{ sf.start_date|date:"Y M D H:i" }}
+                                    Start Date: {{ sf.start_date|date:"Y-m-d" }}
                                     {% if sf.end_date %}
-                                        | End Date: {{ sf.end_date|date:"Y M D H:i" }}
+                                        | End Date: {{ sf.end_date|date:"Y-m-d" }}
                                     {% endif %}
+                                    | Time: {{ sf.start_time|time:"H:i" }} - {{ sf.end_time|time:"H:i" }}
                                 </small>
                             </li>
-                        {% endfor %}
+                            {% endfor %}
                         </ul>
                     {% else %}
                         <p>No service frequencies set.</p>

@@ -2,12 +2,89 @@
 
 {% block content %}
 <div class="container">
-    <h2>Edit Service Frequency</h2>
+    <h2>{% if object %}Edit{% else %}Add{% endif %} Service Frequency</h2>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        {{ form.non_field_errors }}
+
+        <div class="form-group">
+            {{ form.service_type.errors }}
+            <label for="{{ form.service_type.id_for_label }}">Service Type:</label>
+            {{ form.service_type }}
+        </div>
+
+        <div class="form-group">
+            {{ form.recurrence_pattern.errors }}
+            <label for="{{ form.recurrence_pattern.id_for_label }}">Recurrence Pattern:</label>
+            {{ form.recurrence_pattern }}
+        </div>
+
+        <div class="form-group">
+            {{ form.frequency.errors }}
+            <label for="{{ form.frequency.id_for_label }}">Recur every:</label>
+            {{ form.frequency }}
+            <span id="frequency_unit">days</span>
+        </div>
+
+        <div class="form-group">
+            {{ form.preferred_days.errors }}
+            <label>On:</label>
+            {{ form.preferred_days }}
+        </div>
+
+        <div class="form-group">
+            {{ form.start_time.errors }}
+            <label for="{{ form.start_time.id_for_label }}">Start Time:</label>
+            {{ form.start_time }}
+        </div>
+
+        <div class="form-group">
+            {{ form.end_time.errors }}
+            <label for="{{ form.end_time.id_for_label }}">End Time:</label>
+            {{ form.end_time }}
+        </div>
+
+        <div class="form-group">
+            {{ form.start_date.errors }}
+            <label for="{{ form.start_date.id_for_label }}">Start Date:</label>
+            {{ form.start_date }}
+        </div>
+
+        <div class="form-group">
+            {{ form.end_date.errors }}
+            <label for="{{ form.end_date.id_for_label }}">End Date:</label>
+            {{ form.end_date }}
+        </div>
+
         <button type="submit" class="btn btn-primary">Save</button>
         <a href="{% url 'residents:resident_dashboard' object.resident.pk %}" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var recurrencePattern = document.getElementById('{{ form.recurrence_pattern.id_for_label }}');
+        var frequencyUnit = document.getElementById('frequency_unit');
+
+        function updateFrequencyUnit() {
+            switch(recurrencePattern.value) {
+                case 'daily':
+                    frequencyUnit.textContent = 'days';
+                    break;
+                case 'weekly':
+                    frequencyUnit.textContent = 'weeks';
+                    break;
+                case 'monthly':
+                    frequencyUnit.textContent = 'months';
+                    break;
+                case 'yearly':
+                    frequencyUnit.textContent = 'years';
+                    break;
+            }
+        }
+
+        recurrencePattern.addEventListener('change', updateFrequencyUnit);
+        updateFrequencyUnit();  // Call once to set initial state
+    });
+</script>
 {% endblock %}
