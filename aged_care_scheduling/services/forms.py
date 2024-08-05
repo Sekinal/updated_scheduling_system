@@ -40,10 +40,11 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         model = ResidentServiceFrequency
         fields = ['resident', 'service_type', 'recurrence_pattern', 'frequency', 'preferred_days', 'start_time', 'end_time', 'start_date', 'recurrence_end', 'occurrences', 'end_date']
         widgets = {
-            'start_time': forms.TimeInput(attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time', 'id': 'id_start_time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'id': 'id_end_time'}),
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
+            'service_type': forms.Select(attrs={'id': 'id_service_type'}),
         }
 
 

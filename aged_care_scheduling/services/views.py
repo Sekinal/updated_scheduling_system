@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.http import JsonResponse
 from .models import Service, ServiceType, ResidentPreference, BlockedTime, Escalation
 from .forms import ServiceTypeForm, ServiceForm, ResidentPreferenceForm, BlockedTimeForm, EscalationForm
 from residents.models import Resident
@@ -287,3 +288,10 @@ def add_service_frequency(request, resident_id):
     }
     return render(request, 'services/add_service_frequency.html', context)
 
+def get_service_type_duration(request, service_type_id):
+    try:
+        service_type = ServiceType.objects.get(id=service_type_id)
+        duration_minutes = service_type.duration.total_seconds() / 60
+        return JsonResponse({'duration': duration_minutes})
+    except ServiceType.DoesNotExist:
+        return JsonResponse({'error': 'Service type not found'}, status=404)

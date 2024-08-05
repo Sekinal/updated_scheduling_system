@@ -1,4 +1,4 @@
-<!-- templates/resident/resident_dashboarc -->
+<!-- templates/resident/resident_dashboard.html -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -7,34 +7,59 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 <style>
-    .card {
+   .card {
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
     }
-    .card:hover {
+   .card:hover {
         box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
         transform: translateY(-5px);
     }
-    .card-header {
+   .card-header {
         background-color: #f8f9fa;
         border-bottom: 2px solid #e9ecef;
     }
-    .badge-custom {
+   .badge-custom {
         font-size: 0.8em;
         padding: 0.4em 0.6em;
     }
-    .list-group-item {
+   .list-group-item {
         transition: background-color 0.3s ease;
     }
-    .list-group-item:hover {
+   .list-group-item:hover {
         background-color: #f8f9fa;
     }
-    .btn-custom {
+   .btn-custom {
         transition: all 0.3s ease;
     }
-    .btn-custom:hover {
+   .btn-custom:hover {
         transform: translateY(-2px);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Improved icon spacing */
+   .fa-icon {
+        margin-right: 8px;
+    }
+   .fa-icon-sm {
+        font-size: 0.9em;
+        margin-right: 6px;
+    }
+   .dt-inline {
+        display: inline-block;
+        margin-right: 12px;
+    }
+    dd {
+        margin-left: 18px;
+    }
+   .list-group-item i {
+        margin-right: 12px;
+    }
+   .form-label {
+        margin-right: 8px;
+    }
+   .modal-header i {
+        margin-right: 8px;
     }
 </style>
 {% endblock %}
@@ -42,7 +67,7 @@
 {% block content %}
 <div class="container my-5" data-aos="fade-up">
     <h1 class="mb-4 text-primary">
-        <i class="fas fa-user-circle mr-2"></i>
+        <i class="fas fa-user-circle fa-icon"></i>
         {{ resident.first_name }} {{ resident.last_name }} Dashboard
     </h1>
     
@@ -50,25 +75,42 @@
         <div class="col-lg-4 mb-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h2 class="h5 mb-0"><i class="fas fa-info-circle mr-2"></i>Resident Information</h2>
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-info-circle fa-icon-sm"></i> Resident Information
+                    </h2>
                 </div>
                 <div class="card-body">
                     <dl class="row">
-                        <dt class="col-sm-5"><i class="fas fa-birthday-cake mr-2"></i>Date of Birth:</dt>
+                        <dt class="col-sm-5 dt-inline">
+                            <i class="fas fa-birthday-cake fa-icon-sm"></i>
+                            Date of Birth:
+                        </dt>
                         <dd class="col-sm-7">{{ resident.date_of_birth|date:"F d, Y" }}</dd>
                         
-                        <dt class="col-sm-5"><i class="fas fa-home mr-2"></i>Care Home:</dt>
+                        <dt class="col-sm-5 dt-inline">
+                            <i class="fas fa-home fa-icon-sm"></i>
+                            Care Home:
+                        </dt>
                         <dd class="col-sm-7">{{ resident.care_home }}</dd>
                         
-                        <dt class="col-sm-5"><i class="fas fa-calendar-check mr-2"></i>Admission Date:</dt>
+                        <dt class="col-sm-5 dt-inline">
+                            <i class="fas fa-calendar-check fa-icon-sm"></i>
+                            Admission Date:
+                        </dt>
                         <dd class="col-sm-7">{{ resident.admission_date|date:"F d, Y" }}</dd>
                         
-                        <dt class="col-sm-5"><i class="fas fa-envelope mr-2"></i>Emergency Contact:</dt>
+                        <dt class="col-sm-5 dt-inline">
+                            <i class="fas fa-envelope fa-icon-sm"></i>
+                            Emergency Contact:
+                        </dt>
                         <dd class="col-sm-7">
                             <a href="mailto:{{ resident.emergency_email }}">{{ resident.emergency_email }}</a>
                         </dd>
                         
-                        <dt class="col-sm-5"><i class="fas fa-phone mr-2"></i>Emergency Phone:</dt>
+                        <dt class="col-sm-5 dt-inline">
+                            <i class="fas fa-phone fa-icon-sm"></i>
+                            Emergency Phone:
+                        </dt>
                         <dd class="col-sm-7">
                             <a href="tel:{{ resident.emergency_phone }}">{{ resident.emergency_phone }}</a>
                         </dd>
@@ -80,9 +122,11 @@
         <div class="col-lg-8 mb-4">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="h5 mb-0"><i class="fas fa-clock mr-2"></i>Service Frequencies</h2>
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-clock fa-icon-sm"></i> Service Frequencies
+                    </h2>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceFrequencyModal">
-                        <i class="fas fa-plus mr-1"></i> Add New
+                        <i class="fas fa-plus fa-icon-sm"></i> Add New
                     </button>
                 </div>
                 <div class="card-body">
@@ -99,20 +143,20 @@
                                     </div>
                                     <div>
                                         <a href="{% url 'edit_service_frequency' sf.id %}" class="btn btn-sm btn-outline-primary btn-custom mr-1">
-                                            <i class="fas fa-edit"></i>
+                                            <i class="fas fa-edit fa-icon-sm"></i>
                                         </a>
                                         <a href="{% url 'delete_service_frequency' sf.id %}" class="btn btn-sm btn-outline-danger btn-custom" 
                                            onclick="return confirm('Are you sure you want to delete this service frequency?');">
-                                            <i class="fas fa-trash"></i>
+                                            <i class="fas fa-trash fa-icon-sm"></i>
                                         </a>
                                     </div>
                                 </div>
                                 <small class="text-muted">
-                                    <i class="far fa-calendar-alt mr-1"></i> Start: {{ sf.start_date|date:"Y-m-d" }}
+                                    <i class="far fa-calendar-alt fa-icon-sm"></i> Start: {{ sf.start_date|date:"Y-m-d" }}
                                     {% if sf.end_date %}
                                         | End: {{ sf.end_date|date:"Y-m-d" }}
                                     {% endif %}
-                                    | <i class="far fa-clock mr-1"></i> {{ sf.start_time|time:"H:i" }} - {{ sf.end_time|time:"H:i" }}
+                                    | <i class="far fa-clock fa-icon-sm"></i> {{ sf.start_time|time:"H:i" }} - {{ sf.end_time|time:"H:i" }}
                                 </small>
                             </div>
                             {% endfor %}
@@ -129,7 +173,9 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="h5 mb-0"><i class="fas fa-history mr-2"></i>Visit History</h2>
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-history fa-icon-sm"></i> Visit History
+                    </h2>
                 </div>
                 <div class="card-body">
                     {% if visit_history %}
@@ -140,18 +186,18 @@
                                     <div>
                                         <h6 class="mb-0">{{ service.service_type.name }}</h6>
                                         <small class="text-muted">
-                                            <i class="far fa-calendar-alt mr-1"></i> {{ service.scheduled_time|date:"F d, Y H:i" }}
+                                            <i class="far fa-calendar-alt fa-icon-sm"></i> {{ service.scheduled_time|date:"F d, Y H:i" }}
                                         </small>
                                     </div>
                                     <div>
                                         <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary btn-custom mr-1">
-                                            <i class="fas fa-edit"></i>
+                                            <i class="fas fa-edit fa-icon-sm"></i>
                                         </a>
                                         <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary btn-custom mr-1">
-                                            <i class="fas fa-sync-alt"></i>
+                                            <i class="fas fa-sync-alt fa-icon-sm"></i>
                                         </a>
                                         <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger btn-custom">
-                                            <i class="fas fa-trash"></i>
+                                            <i class="fas fa-trash fa-icon-sm"></i>
                                         </a>
                                         <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }} badge-custom ml-2">
                                             {{ service.get_status_display }}
@@ -168,12 +214,12 @@
                                     {% if visit_history.has_previous %}
                                         <li class="page-item">
                                             <a class="page-link" href="?page={{ visit_history.previous_page_number }}">
-                                                <i class="fas fa-chevron-left"></i>
+                                                <i class="fas fa-chevron-left fa-icon-sm"></i>
                                             </a>
                                         </li>
                                     {% else %}
                                         <li class="page-item disabled">
-                                            <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                                            <span class="page-link"><i class="fas fa-chevron-left fa-icon-sm"></i></span>
                                         </li>
                                     {% endif %}
 
@@ -192,12 +238,12 @@
                                     {% if visit_history.has_next %}
                                         <li class="page-item">
                                             <a class="page-link" href="?page={{ visit_history.next_page_number }}">
-                                                <i class="fas fa-chevron-right"></i>
+                                                <i class="fas fa-chevron-right fa-icon-sm"></i>
                                             </a>
                                         </li>
                                     {% else %}
                                         <li class="page-item disabled">
-                                            <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                                            <span class="page-link"><i class="fas fa-chevron-right fa-icon-sm"></i></span>
                                         </li>
                                     {% endif %}
                                 </ul>
@@ -213,16 +259,16 @@
     
     <div class="mt-5 text-center">
         <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-primary btn-custom mx-2">
-            <i class="fas fa-user-edit mr-1"></i> Edit Resident
+            <i class="fas fa-user-edit fa-icon-sm"></i> Edit Resident
         </a>
         <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-danger btn-custom mx-2">
-            <i class="fas fa-user-minus mr-1"></i> Delete Resident
+            <i class="fas fa-user-minus fa-icon-sm"></i> Delete Resident
         </a>
         <a href="{% url 'resident_service_list' resident.pk %}" class="btn btn-success btn-custom mx-2">
-            <i class="fas fa-clipboard-list mr-1"></i> Services
+            <i class="fas fa-clipboard-list fa-icon-sm"></i> Services
         </a>
         <a href="{{ back_url }}" class="btn btn-secondary btn-custom mx-2">
-            <i class="fas fa-arrow-left mr-1"></i> Back to List
+            <i class="fas fa-arrow-left fa-icon-sm"></i> Back to List
         </a>
     </div>
 </div>
@@ -232,22 +278,28 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addServiceFrequencyModalLabel">Add Service Frequency</h5>
+                <h5 class="modal-title" id="addServiceFrequencyModalLabel">
+                    <i class="fas fa-clock fa-icon-sm"></i> Add Service Frequency
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" action="{% url 'add_service_frequency' resident.id %}">
+                <form method="post" action="{% url 'add_service_frequency' resident.id %}" id="serviceFrequencyForm">
                     {% csrf_token %}
                     {{ service_frequency_form.as_p }}
-                    <button type="submit" class="btn btn-primary">Add Service Frequency</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus fa-icon-sm"></i> Add Service Frequency
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
@@ -256,8 +308,8 @@
 
         function updateVisibility() {
             const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
-            occurrencesInput.style.display = selectedValue === 'after' ? 'block' : 'none';
-            endDateInput.style.display = selectedValue === 'on_date' ? 'block' : 'none';
+            occurrencesInput.style.display = selectedValue === 'after'? 'block' : 'none';
+            endDateInput.style.display = selectedValue === 'on_date'? 'block' : 'none';
         }
 
         radioButtons.forEach(radio => {
@@ -266,6 +318,50 @@
 
         // Initial visibility update
         updateVisibility();
+    });
+    const serviceTypeSelect = document.getElementById('id_service_type');
+    const startTimeInput = document.getElementById('id_start_time');
+    const endTimeInput = document.getElementById('id_end_time');
+
+    function updateEndTime() {
+        const serviceTypeId = serviceTypeSelect.value;
+        const duration = JSON.parse(serviceTypeSelect.dataset.duration)[serviceTypeId];
+        const startTime = new Date(`1970-01-01T${startTimeInput.value}Z`);
+        const endTime = new Date(startTime.getTime() + duration);
+
+        endTimeInput.value = `${endTime.getUTCHours().toString().padStart(2, '0')}:${endTime.getUTCMinutes().toString().padStart(2, '0')}:00`;
+    }
+
+    serviceTypeSelect.addEventListener('change', updateEndTime);
+    startTimeInput.addEventListener('input', updateEndTime);
+
+    // Initial update
+    updateEndTime();
+    document.addEventListener('DOMContentLoaded', function() {
+        const serviceTypeSelect = document.getElementById('id_service_type');
+        const startTimeInput = document.getElementById('id_start_time');
+        const endTimeInput = document.getElementById('id_end_time');
+
+        function updateEndTime() {
+            const serviceTypeId = serviceTypeSelect.value;
+            const startTime = startTimeInput.value;
+
+            if (serviceTypeId && startTime) {
+                fetch(`/api/service-type/${serviceTypeId}/duration/`)
+                   .then(response => response.json())
+                   .then(data => {
+                        const duration = data.duration;
+                        const [hours, minutes] = startTime.split(':');
+                        const startDate = new Date(2000, 0, 1, hours, minutes);
+                        const endDate = new Date(startDate.getTime() + duration * 60000);
+                        const endTime = endDate.toTimeString().slice(0, 5);
+                        endTimeInput.value = endTime;
+                    });
+            }
+        }
+
+        serviceTypeSelect.addEventListener('change', updateEndTime);
+        startTimeInput.addEventListener('change', updateEndTime);
     });
 </script>
 {% endblock %}
