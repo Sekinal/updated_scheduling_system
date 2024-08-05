@@ -1,3 +1,5 @@
+# residents/views.py
+
 from django.urls import reverse
 from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
