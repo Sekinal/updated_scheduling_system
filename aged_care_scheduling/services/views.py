@@ -286,3 +286,4 @@ def add_service_frequency(request, resident_id):
         'resident': resident,
     }
     return render(request, 'services/add_service_frequency.html', context)
+

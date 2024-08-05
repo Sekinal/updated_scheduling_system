@@ -51,8 +51,10 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         self.resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
         if self.resident:
-            self.fields['service_type'].queryset = ServiceType.objects.all()  # You can filter this if needed
-
+            self.fields['resident'].initial = self.resident
+            self.fields['resident'].widget.attrs['readonly'] = True
+            self.fields['resident'].widget.attrs['style'] = 'pointer-events: none;'
+            
     def clean(self):
         cleaned_data = super().clean()
         recurrence_end = cleaned_data.get('recurrence_end')
