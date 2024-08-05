@@ -265,19 +265,19 @@ def delete_service_frequency(request, pk):
 def add_service_frequency(request, resident_id):
     resident = get_object_or_404(Resident, pk=resident_id)
     if request.method == 'POST':
-        form = ResidentServiceFrequencyForm(request.POST, resident=resident)
+        form = ResidentServiceFrequencyForm(request.POST)
         if form.is_valid():
             service_frequency = form.save(commit=False)
             service_frequency.resident = resident
             service_frequency.save()
             
-            # Create services based on the frequency settings
+            # Schedule services based on the new frequency
             service_frequency.create_services()
             
-            messages.success(request, 'Service frequency added successfully and services created.')
+            messages.success(request, 'Service frequency added successfully and services scheduled.')
             return redirect('residents:resident_dashboard', pk=resident_id)
     else:
-        form = ResidentServiceFrequencyForm(resident=resident)
+        form = ResidentServiceFrequencyForm()
     
     context = {
         'form': form,

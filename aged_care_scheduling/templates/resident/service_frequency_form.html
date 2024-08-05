@@ -19,14 +19,14 @@
             {{ form.recurrence_pattern }}
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="frequency_group">
             {{ form.frequency.errors }}
-            <label for="{{ form.frequency.id_for_label }}">Recur every:</label>
+            <label for="{{ form.frequency.id_for_label }}" id="frequency_label">Recur every:</label>
             {{ form.frequency }}
-            <span id="frequency_unit">days</span>
+            <span id="frequency_unit">day(s)</span>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="preferred_days_group">
             {{ form.preferred_days.errors }}
             <label>On:</label>
             {{ form.preferred_days }}
@@ -61,29 +61,51 @@
     </form>
 </div>
 
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var recurrencePattern = document.getElementById('{{ form.recurrence_pattern.id_for_label }}');
-        var frequencyUnit = document.getElementById('frequency_unit');
+    $(document).ready(function() {
+        var $recurrencePattern = $('#{{ form.recurrence_pattern.id_for_label }}');
+        var $frequencyUnit = $('#frequency_unit');
+        var $frequencyInput = $('#{{ form.frequency.id_for_label }}');
+        var $preferredDaysGroup = $('#preferred_days_group');
+        var $frequencyLabel = $('#frequency_label');
 
         function updateFrequencyUnit() {
-            switch(recurrencePattern.value) {
+            var pattern = $recurrencePattern.val();
+            switch(pattern) {
                 case 'daily':
-                    frequencyUnit.textContent = 'days';
+                    $frequencyUnit.text('day(s)');
+                    $preferredDaysGroup.hide();
+                    $frequencyInput.val('1');
                     break;
                 case 'weekly':
-                    frequencyUnit.textContent = 'weeks';
+                    $frequencyUnit.text('week(s)');
+                    $preferredDaysGroup.show();
                     break;
                 case 'monthly':
-                    frequencyUnit.textContent = 'months';
+                    $frequencyUnit.text('month(s)');
+                    $preferredDaysGroup.hide();
                     break;
                 case 'yearly':
-                    frequencyUnit.textContent = 'years';
+                    $frequencyUnit.text('year(s)');
+                    $preferredDaysGroup.hide();
                     break;
+            }
+            updateFrequencyLabel();
+        }
+
+        function updateFrequencyLabel() {
+            if ($recurrencePattern.val() === 'daily') {
+                $frequencyLabel.text('Recur every ' + $frequencyInput.val() + ' day(s):');
+            } else {
+                $frequencyLabel.text('Recur every:');
             }
         }
 
-        recurrencePattern.addEventListener('change', updateFrequencyUnit);
+        $recurrencePattern.on('change', updateFrequencyUnit);
+        $frequencyInput.on('input', updateFrequencyLabel);
         updateFrequencyUnit();  // Call once to set initial state
     });
 </script>

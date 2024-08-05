@@ -44,10 +44,12 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+
     def __init__(self, *args, **kwargs):
         self.resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
-        self.fields['service_type'].queryset = ServiceType.objects.all()
+        if self.resident:
+            self.fields['service_type'].queryset = ServiceType.objects.all()  # You can filter this if needed
 
     def clean(self):
         cleaned_data = super().clean()
@@ -62,16 +64,13 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
 
         return cleaned_data
 
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.resident = self.resident
-        
+        if self.resident:
+            instance.resident = self.resident
         if commit:
             instance.save()
-            
-            # Create services based on the frequency settings
-            instance.create_services()
-        
         return instance
 
 class ServiceTypeForm(forms.ModelForm):
