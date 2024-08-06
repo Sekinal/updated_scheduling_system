@@ -33,7 +33,10 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         ('after', 'After'),
         ('on_date', 'On Date'),
     ]
-    recurrence_end = forms.ChoiceField(choices=RECURRENCE_END_CHOICES, initial='never', widget=forms.RadioSelect)
+
+    recurrence_end = forms.ChoiceField(choices=RECURRENCE_END_CHOICES, 
+                                    initial='never', 
+                                    widget=forms.RadioSelect)
     occurrences = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
@@ -55,9 +58,18 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
             self.fields['resident'].initial = self.resident
             self.fields['resident'].widget.attrs['readonly'] = True
             self.fields['resident'].widget.attrs['style'] = 'pointer-events: none;'
+        
+        self.fields['preferred_days'].required = False  # Set the field as not required
+
+        # If recurrence pattern is already set to daily, hide the preferred days field
+        if self.instance.recurrence_pattern == 'daily':
+            self.fields['preferred_days'].widget = forms.HiddenInput()
             
     def clean(self):
         cleaned_data = super().clean()
+        recurrence_pattern = cleaned_data.get('recurrence_pattern')
+        if recurrence_pattern == 'daily':
+            cleaned_data['preferred_days'] = []  # Clear any selected days when the pattern is daily
         recurrence_end = cleaned_data.get('recurrence_end')
         occurrences = cleaned_data.get('occurrences')
         end_date = cleaned_data.get('end_date')

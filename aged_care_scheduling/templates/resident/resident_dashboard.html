@@ -363,5 +363,62 @@
             .catch(error => console.error('Error:', error));  // Log any errors
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
+    const preferredDaysField = document.getElementById('id_preferred_days');
+    const preferredDaysLabel = preferredDaysField.previousElementSibling;
+
+    function updatePreferredDaysVisibility() {
+        const selectedValue = recurrencePatternSelect.value;
+        if (selectedValue === 'daily') {
+            preferredDaysField.style.display = 'none';
+            preferredDaysLabel.style.display = 'none';
+        } else {
+            preferredDaysField.style.display = 'block';
+            preferredDaysLabel.style.display = 'block';
+        }
+    }
+
+    recurrencePatternSelect.addEventListener('change', updatePreferredDaysVisibility);
+
+    // Initial visibility update
+    updatePreferredDaysVisibility();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
+    const occurrencesLabel = document.querySelector('label[for="id_occurrences"]');
+    const occurrencesInput = document.getElementById('id_occurrences');
+    const endDateLabel = document.querySelector('label[for="id_end_date"]');
+    const endDateInput = document.getElementById('id_end_date');
+
+    function updateVisibility() {
+        const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
+        if (selectedValue === 'after') {
+            occurrencesLabel.style.display = 'block';
+            occurrencesInput.style.display = 'block';
+            endDateLabel.style.display = 'none';
+            endDateInput.style.display = 'none';
+        } else if (selectedValue === 'on_date') {
+            occurrencesLabel.style.display = 'none';
+            occurrencesInput.style.display = 'none';
+            endDateLabel.style.display = 'block';
+            endDateInput.style.display = 'block';
+        } else {
+            occurrencesLabel.style.display = 'none';
+            occurrencesInput.style.display = 'none';
+            endDateLabel.style.display = 'none';
+            endDateInput.style.display = 'none';
+        }
+    }
+
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', updateVisibility);
+    });
+
+    // Initial visibility update
+    updateVisibility();
+});
 </script>
 {% endblock %}
