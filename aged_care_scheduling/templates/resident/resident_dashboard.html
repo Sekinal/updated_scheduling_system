@@ -136,9 +136,9 @@
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="mb-0">{{ sf.service_type.name }}</h6>
+                                        <h6 class="mb-0">{{ sf.service_type.name|default:"Unknown Service" }}</h6>
                                         <span class="badge bg-primary badge-custom">
-                                            Every {{ sf.frequency }} {{ sf.recurrence_pattern }}
+                                            Every {{ sf.frequency|default:"1" }} {{ sf.get_recurrence_pattern_display|default:"day" }}
                                         </span>
                                     </div>
                                     <div>
@@ -152,11 +152,11 @@
                                     </div>
                                 </div>
                                 <small class="text-muted">
-                                    <i class="far fa-calendar-alt fa-icon-sm"></i> Start: {{ sf.start_date|date:"Y-m-d" }}
+                                    <i class="far fa-calendar-alt fa-icon-sm"></i> 
+                                    Start: {{ sf.start_date|date:"Y-m-d"|default:"Not set" }}
                                     {% if sf.end_date %}
                                         | End: {{ sf.end_date|date:"Y-m-d" }}
                                     {% endif %}
-                                    | <i class="far fa-clock fa-icon-sm"></i> {{ sf.start_time|time:"H:i" }} - {{ sf.end_time|time:"H:i" }}
                                 </small>
                             </div>
                             {% endfor %}
@@ -167,7 +167,6 @@
                 </div>
             </div>
         </div>
-    </div>
     
     <div class="row mt-4">
         <div class="col-12">
@@ -287,6 +286,9 @@
                 <form method="post" action="{% url 'add_service_frequency' resident.id %}" id="serviceFrequencyForm">
                     {% csrf_token %}
                     {{ service_frequency_form.as_p }}
+                    <div id="monthlyDatesField" style="display: none;">
+                        {{ service_frequency_form.monthly_dates }}
+                    </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-plus fa-icon-sm"></i> Add Service Frequency
                     </button>
@@ -419,6 +421,85 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial visibility update
     updateVisibility();
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
+    const frequencyLabel = document.querySelector('label[for="id_frequency"]');
+    const frequencyInput = document.getElementById('id_frequency');
+
+    function updateFrequencyLabel() {
+        const selectedValue = recurrencePatternSelect.value;
+        if (selectedValue === 'daily') {
+            frequencyLabel.innerText = 'Recur every';
+            frequencyInput.type = 'number';
+            frequencyInput.min = '1';
+            const pluralize = document.createElement('span');
+            pluralize.innerText = ' day(s)';
+            pluralize.style.marginLeft = '5px';
+            frequencyInput.parentNode.appendChild(pluralize);
+        } else if (selectedValue === 'weekly') {
+            frequencyLabel.innerText = 'Recur every';
+            frequencyInput.type = 'number';
+            frequencyInput.min = '1';
+            const pluralize = document.createElement('span');
+            pluralize.innerText = ' week(s)';
+            pluralize.style.marginLeft = '5px';
+            frequencyInput.parentNode.appendChild(pluralize);
+        } else if (selectedValue === 'monthly') {
+            frequencyLabel.innerText = 'Recur every';
+            frequencyInput.type = 'number';
+            frequencyInput.min = '1';
+            const pluralize = document.createElement('span');
+            pluralize.innerText = ' month(s)';
+            pluralize.style.marginLeft = '5px';
+            frequencyInput.parentNode.appendChild(pluralize);
+        } else if (selectedValue === 'yearly') {
+            frequencyLabel.innerText = 'Recur every';
+            frequencyInput.type = 'number';
+            frequencyInput.min = '1';
+            const pluralize = document.createElement('span');
+            pluralize.innerText = ' year(s)';
+            pluralize.style.marginLeft = '5px';
+            frequencyInput.parentNode.appendChild(pluralize);
+        }
+        if(frequencyInput.parentNode.children.length > 3)
+            frequencyInput.parentNode.removeChild(frequencyInput.parentNode.children[2])
+    }
+
+    recurrencePatternSelect.addEventListener('change', updateFrequencyLabel);
+
+    // Initial label update
+    updateFrequencyLabel();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
+    const monthlyDatesField = document.getElementById('monthlyDatesField');
+    const preferredDaysField = document.getElementById('id_preferred_days');
+    const preferredDaysLabel = preferredDaysField.previousElementSibling;
+
+    function updateFieldVisibility() {
+        const selectedValue = recurrencePatternSelect.value;
+        if (selectedValue === 'monthly') {
+            monthlyDatesField.style.display = 'block';
+            preferredDaysField.style.display = 'none';
+            preferredDaysLabel.style.display = 'none';
+        } else {
+            monthlyDatesField.style.display = 'none';
+            if (selectedValue === 'daily' || selectedValue === 'yearly') {
+                preferredDaysField.style.display = 'none';
+                preferredDaysLabel.style.display = 'none';
+            } else {
+                preferredDaysField.style.display = 'block';
+                preferredDaysLabel.style.display = 'block';
+            }
+        }
+    }
+
+    recurrencePatternSelect.addEventListener('change', updateFieldVisibility);
+
+    // Initial visibility update
+    updateFieldVisibility();
 });
 </script>
 {% endblock %}

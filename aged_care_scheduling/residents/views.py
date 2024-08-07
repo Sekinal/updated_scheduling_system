@@ -86,7 +86,6 @@ class ResidentDashboardView(DetailView):
                 'id': sf.id,
                 'service_type': sf.service_type,
                 'recurrence_pattern_value': sf.recurrence_pattern,
-                'recurrence_pattern_text': self.get_recurrence_pattern_text(sf.recurrence_pattern),
                 'frequency': sf.frequency,
                 'start_date': sf.start_date,
                 'end_date': sf.end_date,
