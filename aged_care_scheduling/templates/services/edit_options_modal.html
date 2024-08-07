@@ -1,0 +1,30 @@
+<div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Service</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Do you want to edit this specific service or the entire recurring schedule?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <a href="{% url 'service_update' pk=service.pk %}" class="btn btn-primary">Edit This Service</a>
+        <a href="{% url 'edit_service_frequency' pk=frequency_id %}" class="btn btn-warning">Edit Entire Schedule</a>
+      </div>
+    </div>
+  </div>
+
+<script>
+$(document).on('click', '.edit-service-btn', function(e) {
+    e.preventDefault();
+    var url = $(this).attr('href');
+    $.get(url, function(data) {
+        if (data.html) {
+            $('#editOptionsModal').html(data.html).modal('show');
+        } else {
+            window.location.href = url;
+        }
+    });
+});
+</script>

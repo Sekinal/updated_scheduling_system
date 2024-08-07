@@ -58,15 +58,34 @@
                 </p>
               </div>
               <div class="card-footer bg-transparent">
-                <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary me-1">
+                <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ service.id }}">
                   <i class="fas fa-edit"></i> Edit
-                </a>
+                </button>
                 <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary me-1">
                   <i class="fas fa-sync-alt"></i> Update Status
                 </a>
                 <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger">
                   <i class="fas fa-trash"></i> Delete
                 </a>
+              </div>
+            </div>
+          </div>
+          <!-- Modal for edit service -->
+<div class="modal fade" id="editServiceModal{{ service.id }}" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.5);">            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="editServiceModalLabel">Edit Service</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <p>Do you want to edit this occurrence or the entire series?</p>
+                </div>
+                <div class="modal-footer">
+                  <a href="{% url 'service_update' service.id %}" class="btn btn-secondary">Edit this occurrence</a>
+                  {% if service.frequency_id %}
+                    <a href="{% url 'edit_service_frequency' service.frequency_id %}" class="btn btn-primary">Edit entire series</a>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </div>
@@ -118,36 +137,42 @@
   </div>
 </div>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      var serviceTypeSelect = document.getElementById('id_service_type');
-      var durationInput = document.getElementById('id_duration');
-      var startTimeInput = document.getElementById('id_start_time');
-      var endTimeInput = document.getElementById('id_end_time');
-      var recurrenceEndSelect = document.getElementById('id_recurrence_end');
-      var occurrencesInput = document.getElementById('id_occurrences');
+document.addEventListener('DOMContentLoaded', function() {
+    var serviceTypeSelect = document.getElementById('id_service_type');
+    var durationInput = document.getElementById('id_duration');
+    var startTimeInput = document.getElementById('id_start_time');
+    var endTimeInput = document.getElementById('id_end_time');
+    var recurrenceEndSelect = document.getElementById('id_recurrence_end');
+    var occurrencesInput = document.getElementById('id_occurrences');
 
-      serviceTypeSelect.addEventListener('change', function() {
-          var selectedOption = this.options[this.selectedIndex];
-          var duration = selectedOption.getAttribute('data-duration');
-          durationInput.value = duration;
-          updateEndTime();
-      });
+    if (serviceTypeSelect !== null) {
+        serviceTypeSelect.addEventListener('change', function() {
+            var selectedOption = this.options[this.selectedIndex];
+            var duration = selectedOption.getAttribute('data-duration');
+            durationInput.value = duration;
+            updateEndTime();
+        });
+    }
 
-      startTimeInput.addEventListener('change', updateEndTime);
+    if (startTimeInput !== null) {
+        startTimeInput.addEventListener('change', updateEndTime);
+    }
 
-      function updateEndTime() {
-          if (startTimeInput.value && durationInput.value) {
-              var startTime = new Date('2000-01-01T' + startTimeInput.value);
-              var durationParts = durationInput.value.split(':');
-              var endTime = new Date(startTime.getTime() + (parseInt(durationParts[0]) * 3600000) + (parseInt(durationParts[1]) * 60000) + (parseInt(durationParts[2]) * 1000));
-              endTimeInput.value = endTime.toTimeString().slice(0, 5);
-          }
-      }
+    function updateEndTime() {
+        if (startTimeInput.value && durationInput.value) {
+            var startTime = new Date('2000-01-01T' + startTimeInput.value);
+            var durationParts = durationInput.value.split(':');
+            var endTime = new Date(startTime.getTime() + (parseInt(durationParts[0]) * 3600000) + (parseInt(durationParts[1]) * 60000) + (parseInt(durationParts[2]) * 1000));
+            endTimeInput.value = endTime.toTimeString().slice(0, 5);
+        }
+    }
 
-      recurrenceEndSelect.addEventListener('change', function() {
-          occurrencesInput.disabled = (this.value === 'never');
-      });
-  });
+    if (recurrenceEndSelect !== null) {
+        recurrenceEndSelect.addEventListener('change', function() {
+            occurrencesInput.disabled = (this.value === 'never');
+        });
+    }
+});
 </script>
 
 {% endblock %}

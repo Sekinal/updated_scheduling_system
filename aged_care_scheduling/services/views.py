@@ -257,7 +257,6 @@ def edit_service_frequency(request, pk):
         form = ResidentServiceFrequencyForm(instance=service_frequency, resident=service_frequency.resident)
     
     return render(request, 'services/edit_service_frequency.html', {'form': form, 'service_frequency': service_frequency})
-
 def delete_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     resident_pk = service_frequency.resident.pk
