@@ -6,9 +6,12 @@
 <style>
   .service-card {
     transition: all 0.3s ease;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
   .service-card:hover {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     transform: translateY(-5px);
   }
   .status-icon {
@@ -17,12 +20,36 @@
   .modal-backdrop {
     display: none;
     z-index: 1040 !important;
-    }
-
-    .modal-content {
-        margin: 2px auto;
-        z-index: 1100 !important;
-    }
+  }
+  .modal-content {
+    margin: 2px auto;
+    z-index: 1100 !important;
+    border-radius: 10px;
+  }
+  .grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .card-header {
+    background-color: #f4f4f4;
+    border-bottom: 1px solid #ddd;
+  }
+  .card-footer {
+    background-color: #f4f4f4;
+    border-top: 1px solid #ddd;
+  }
+  .btn {
+    transition: all 0.3s ease;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+  }
 </style>
 {% endblock %}
 
@@ -31,76 +58,93 @@
   <div data-aos="fade-up">
     <h2 class="mb-4">Services for {{ resident.first_name }} {{ resident.last_name }}</h2>
   </div>
-  
+
   <div data-aos="fade-up" data-aos-delay="200" class="mb-4">
     <a href="{% url 'residents:resident_dashboard' resident.id %}" class="btn btn-primary me-2">
       <i class="fas fa-arrow-left"></i> Back to Dashboard
     </a>
+    <button class="btn btn-secondary me-2" id="toggle-view">
+      <i class="fas fa-th-large" id="view-icon"></i> Toggle View
+    </button>
+    <select class="form-select me-2" id="filter-service-type">
+      <option value="">Filter by Service Type</option>
+      {% for service_type in service_types %}
+        <option value="{{ service_type.id }}">{{ service_type.name }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-select me-2" id="filter-month">
+      <option value="">Filter by Month</option>
+      {% for month in months %}
+        <option value="{{ month }}">{{ month }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-select me-2" id="filter-caregiver">
+      <option value="">Filter by Caregiver</option>
+      {% for caregiver in caregivers %}
+        <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
+      {% endfor %}
+    </select>
   </div>
 
-  <div data-aos="fade-up" data-aos-delay="400">
+  <div data-aos="fade-up" data-aos-delay="400" id="services-container" class="grid-view">
     {% if services %}
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for service in services %}
-          <div class="col">
-            <div class="card service-card h-100">
-              <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">{{ service.service_type }}</h5>
-                <span class="status-icon">
-                  {% if service.status == 'completed' %}
-                    <i class="fas fa-check-circle text-success" title="Completed"></i>
-                  {% elif service.status == 'scheduled' %}
-                    <i class="fas fa-clock text-primary" title="Scheduled"></i>
-                  {% elif service.status == 'unscheduled' %}
-                    <i class="fas fa-exclamation-circle text-warning" title="Unscheduled"></i>
-                  {% else %}
-                    <i class="fas fa-times-circle text-danger" title="{{ service.get_status_display }}"></i>
-                  {% endif %}
-                </span>
+      {% for service in services %}
+      <div class="service-card h-100" 
+      data-service-type="{{ service.service_type.id }}"
+      data-caregiver="{{ service.caregiver.id|default:'' }}"
+      data-month="{{ service.due_date|date:'F' }}">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">{{ service.service_type }}</h5>
+            <span class="status-icon">
+              {% if service.status == 'completed' %}
+                <i class="fas fa-check-circle text-success" title="Completed"></i>
+              {% elif service.status == 'scheduled' %}
+                <i class="fas fa-clock text-primary" title="Scheduled"></i>
+              {% elif service.status == 'unscheduled' %}
+                <i class="fas fa-exclamation-circle text-warning" title="Unscheduled"></i>
+              {% else %}
+                <i class="fas fa-times-circle text-danger" title="{{ service.get_status_display }}"></i>
+              {% endif %}
+            </span>
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <strong>Scheduled:</strong> {% if service.scheduled_time %}{{ service.scheduled_time|date:"M d, Y h:i A" }}{% else %}Not yet scheduled{% endif %}<br>
+              <strong>Due Date:</strong> {{ service.due_date|date:"M d, Y" }}<br>
+              <strong>Caregiver:</strong> {{ service.caregiver|default:"Not assigned" }}<br>
+              <strong>Status:</strong> <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }}">{{ service.get_status_display }}</span>
+            </p>
+          </div>
+          <div class="card-footer bg-transparent">
+            <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ service.id }}">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger">
+              <i class="fas fa-trash"></i> Delete
+            </a>
+          </div>
+        </div>
+        <!-- Modal for edit service -->
+        <div class="modal fade" id="editServiceModal{{ service.id }}" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.5);">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="editServiceModalLabel">Edit Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-              <div class="card-body">
-                <p class="card-text">
-                  <strong>Scheduled:</strong> {% if service.scheduled_time %}{{ service.scheduled_time|date:"M d, Y h:i A" }}{% else %}Not yet scheduled{% endif %}<br>
-                  <strong>Due Date:</strong> {{ service.due_date|date:"M d, Y" }}<br>
-                  <strong>Caregiver:</strong> {{ service.caregiver|default:"Not assigned" }}<br>
-                  <strong>Status:</strong> <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }}">{{ service.get_status_display }}</span>
-                </p>
+              <div class="modal-body">
+                <p>Do you want to edit this occurrence or the entire series?</p>
               </div>
-              <div class="card-footer bg-transparent">
-                <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ service.id }}">
-                  <i class="fas fa-edit"></i> Edit
-                </button>
-                <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary me-1">
-                  <i class="fas fa-sync-alt"></i> Update Status
-                </a>
-                <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger">
-                  <i class="fas fa-trash"></i> Delete
-                </a>
+              <div class="modal-footer">
+                <a href="{% url 'service_update' service.id %}" class="btn btn-secondary">Edit this occurrence</a>
+                {% if service.frequency_id %}
+                  <a href="{% url 'edit_service_frequency' service.frequency_id %}" class="btn btn-primary">Edit entire series</a>
+                {% endif %}
               </div>
             </div>
           </div>
-          <!-- Modal for edit service -->
-<div class="modal fade" id="editServiceModal{{ service.id }}" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.5);">
-  <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="editServiceModalLabel">Edit Service</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                  <p>Do you want to edit this occurrence or the entire series?</p>
-                </div>
-                <div class="modal-footer">
-                  <a href="{% url 'service_update' service.id %}" class="btn btn-secondary">Edit this occurrence</a>
-                  {% if service.frequency_id %}
-                    <a href="{% url 'edit_service_frequency' service.frequency_id %}" class="btn btn-primary">Edit entire series</a>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
+        </div>
+      {% endfor %}
     {% else %}
       <div class="alert alert-info" role="alert">
         <i class="fas fa-info-circle me-2"></i> No services scheduled for this resident.
@@ -146,43 +190,45 @@
     {% endif %}
   </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var serviceTypeSelect = document.getElementById('id_service_type');
-    var durationInput = document.getElementById('id_duration');
-    var startTimeInput = document.getElementById('id_start_time');
-    var endTimeInput = document.getElementById('id_end_time');
-    var recurrenceEndSelect = document.getElementById('id_recurrence_end');
-    var occurrencesInput = document.getElementById('id_occurrences');
+  const containerView = document.getElementById('services-container');
+  const toggleViewButton = document.getElementById('toggle-view');
+  const viewIcon = document.getElementById('view-icon');
+  const filterServiceType = document.getElementById('filter-service-type');
+  const filterMonth = document.getElementById('filter-month');
+  const filterCaregiver = document.getElementById('filter-caregiver');
 
-    if (serviceTypeSelect !== null) {
-        serviceTypeSelect.addEventListener('change', function() {
-            var selectedOption = this.options[this.selectedIndex];
-            var duration = selectedOption.getAttribute('data-duration');
-            durationInput.value = duration;
-            updateEndTime();
-        });
-    }
+  toggleViewButton.addEventListener('click', () => {
+    containerView.classList.toggle('grid-view');
+    containerView.classList.toggle('list-view');
+    viewIcon.classList.toggle('fa-th-large');
+    viewIcon.classList.toggle('fa-th-list');
+  });
 
-    if (startTimeInput !== null) {
-        startTimeInput.addEventListener('change', updateEndTime);
-    }
+  function applyFilters() {
+    const serviceTypeId = filterServiceType.value;
+    const month = filterMonth.value;
+    const caregiverId = filterCaregiver.value;
 
-    function updateEndTime() {
-        if (startTimeInput.value && durationInput.value) {
-            var startTime = new Date('2000-01-01T' + startTimeInput.value);
-            var durationParts = durationInput.value.split(':');
-            var endTime = new Date(startTime.getTime() + (parseInt(durationParts[0]) * 3600000) + (parseInt(durationParts[1]) * 60000) + (parseInt(durationParts[2]) * 1000));
-            endTimeInput.value = endTime.toTimeString().slice(0, 5);
-        }
-    }
+    const services = document.querySelectorAll('.service-card');
+    services.forEach((service) => {
+      const matchesServiceType = serviceTypeId === '' || service.dataset.serviceType === serviceTypeId;
+      const matchesMonth = month === '' || service.dataset.month === month;
+      const matchesCaregiver = caregiverId === '' || service.dataset.caregiver === caregiverId;
 
-    if (recurrenceEndSelect !== null) {
-        recurrenceEndSelect.addEventListener('change', function() {
-            occurrencesInput.disabled = (this.value === 'never');
-        });
-    }
+      if (matchesServiceType && matchesMonth && matchesCaregiver) {
+        service.style.display = '';
+      } else {
+        service.style.display = 'none';
+      }
+    });
+  }
+
+  filterServiceType.addEventListener('change', applyFilters);
+  filterMonth.addEventListener('change', applyFilters);
+  filterCaregiver.addEventListener('change', applyFilters);
 });
 </script>
-
 {% endblock %}

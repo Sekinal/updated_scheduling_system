@@ -13,7 +13,8 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q
-
+from accounts.models import UserProfile
+from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.core.paginator import Paginator
@@ -171,6 +172,9 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['resident'] = self.resident
+        context['service_types'] = ServiceType.objects.all()
+        context['months'] = [month.name for month in Service.objects.dates('due_date', 'month')]
+        context['caregivers'] = UserProfile.objects.filter(role='staff', user__is_active=True)
         return context
 
 class DeleteAllServicesView(LoginRequiredMixin, View):

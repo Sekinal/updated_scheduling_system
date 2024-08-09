@@ -5,6 +5,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from calendar import month_name
+from accounts.models import UserProfile
 from django.http import JsonResponse
 from .models import Service, ServiceType, ResidentPreference, BlockedTime, Escalation
 from .forms import ServiceTypeForm, ServiceForm, ResidentPreferenceForm, BlockedTimeForm, EscalationForm
@@ -139,6 +141,9 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['resident'] = self.resident
+        context['service_types'] = ServiceType.objects.all()
+        context['months'] = list(month_name)[1:]  # This gives full month names
+        context['caregivers'] = UserProfile.objects.filter(role='staff', user__is_active=True)
         return context
 
 class ResidentPreferenceCreateView(LoginRequiredMixin, CreateView):
