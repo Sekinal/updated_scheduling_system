@@ -89,6 +89,8 @@ class ResidentDashboardView(DetailView):
                 'frequency': sf.frequency,
                 'start_date': sf.start_date,
                 'end_date': sf.end_date,
+                'start_time': sf.start_time,
+                'end_time': sf.end_time,
             }
             for sf in service_frequencies
         ]

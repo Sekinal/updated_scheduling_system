@@ -236,27 +236,56 @@ def check_missed_services(request):
 def edit_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     if request.method == 'POST':
-        form = ResidentServiceFrequencyForm(request.POST, instance=service_frequency, resident=service_frequency.resident)
+        form = ResidentServiceFrequencyForm(request.POST, instance=service_frequency)
         if form.is_valid():
-            service_frequency = form.save()
+            updated_frequency = form.save(commit=False)
+            
+            # Update recurrence end options
+            recurrence_end = form.cleaned_data['recurrence_end']
+            if recurrence_end == 'never':
+                updated_frequency.end_date = None
+                updated_frequency.occurrences = None
+            elif recurrence_end == 'after':
+                updated_frequency.end_date = None
+                updated_frequency.occurrences = form.cleaned_data['occurrences']
+            elif recurrence_end == 'on_date':
+                updated_frequency.end_date = form.cleaned_data['end_date']
+                updated_frequency.occurrences = None
+            
+            updated_frequency.save()
             
             # Delete existing future services
             Service.objects.filter(
-                resident=service_frequency.resident,
-                service_type=service_frequency.service_type,
+                resident=updated_frequency.resident,
+                service_type=updated_frequency.service_type,
                 status__in=['unscheduled', 'scheduled'],
                 due_date__gte=timezone.now().date()
             ).delete()
             
             # Create new services based on updated frequency
-            service_frequency.create_services()
+            updated_frequency.create_services()
             
             messages.success(request, 'Service frequency updated successfully and services rescheduled.')
             return redirect('residents:resident_dashboard', pk=service_frequency.resident.pk)
     else:
-        form = ResidentServiceFrequencyForm(instance=service_frequency, resident=service_frequency.resident)
+        initial_data = {
+            'recurrence_end': 'never',
+            'occurrences': service_frequency.occurrences,
+            'end_date': service_frequency.end_date,
+        }
+        if service_frequency.occurrences:
+            initial_data['recurrence_end'] = 'after'
+        elif service_frequency.end_date:
+            initial_data['recurrence_end'] = 'on_date'
+        
+        form = ResidentServiceFrequencyForm(instance=service_frequency, initial=initial_data)
     
-    return render(request, 'services/edit_service_frequency.html', {'form': form, 'service_frequency': service_frequency})
+    context = {
+        'form': form,
+        'service_frequency': service_frequency,
+    }
+    return render(request, 'services/edit_service_frequency.html', context)
+
 def delete_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     resident_pk = service_frequency.resident.pk

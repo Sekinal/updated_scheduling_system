@@ -14,6 +14,15 @@
   .status-icon {
     font-size: 1.5rem;
   }
+  .modal-backdrop {
+    display: none;
+    z-index: 1040 !important;
+    }
+
+    .modal-content {
+        margin: 2px auto;
+        z-index: 1100 !important;
+    }
 </style>
 {% endblock %}
 
@@ -71,7 +80,8 @@
             </div>
           </div>
           <!-- Modal for edit service -->
-<div class="modal fade" id="editServiceModal{{ service.id }}" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.5);">            <div class="modal-dialog">
+<div class="modal fade" id="editServiceModal{{ service.id }}" tabindex="-1" aria-labelledby="editServiceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
                   <h5 class="modal-title" id="editServiceModalLabel">Edit Service</h5>

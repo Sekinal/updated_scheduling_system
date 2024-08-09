@@ -27,7 +27,7 @@ urlpatterns = [
     path('resident/<int:resident_id>/services/', views.ResidentServiceListView.as_view(), name='resident_service_list'),
     path('delete-all-services/', views.DeleteAllServicesView.as_view(), name='delete_all_services'),
     path('edit-service-frequency/<uuid:pk>/', views.edit_service_frequency, name='edit_service_frequency'),
+    path('edit-service-frequency/<int:pk>/', views.edit_service_frequency, name='edit_service_frequency'),
     path('delete-service-frequency/<int:pk>/', views.delete_service_frequency, name='delete_service_frequency'),
-    path('add-service-frequency/<int:resident_id>/', views.add_service_frequency, name='add_service_frequency'),
     path('resident/<int:resident_id>/add-service-frequency/', views.add_service_frequency, name='add_service_frequency'),
 ]
