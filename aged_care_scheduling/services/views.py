@@ -238,11 +238,13 @@ def check_missed_services(request):
     messages.info(request, "Missed services have been checked and escalated if necessary.")
     return redirect('service_list')
 
+@transaction.atomic
 def edit_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     if request.method == 'POST':
         form = ResidentServiceFrequencyForm(request.POST, instance=service_frequency)
         if form.is_valid():
+            # Save the form without committing to the database yet
             updated_frequency = form.save(commit=False)
             
             # Update recurrence end options
@@ -257,21 +259,25 @@ def edit_service_frequency(request, pk):
                 updated_frequency.end_date = form.cleaned_data['end_date']
                 updated_frequency.occurrences = None
             
-            updated_frequency.save()
-            
-            # Delete existing future services
+            # Delete existing future services that are scheduled
             Service.objects.filter(
                 resident=updated_frequency.resident,
                 service_type=updated_frequency.service_type,
-                status__in=['unscheduled', 'scheduled'],
+                status='scheduled',
                 due_date__gte=timezone.now().date()
             ).delete()
+            
+            # Save the updated frequency
+            updated_frequency.save()
             
             # Create new services based on updated frequency
             updated_frequency.create_services()
             
             messages.success(request, 'Service frequency updated successfully and services rescheduled.')
             return redirect('residents:resident_dashboard', pk=service_frequency.resident.pk)
+        else:
+            # If form is not valid, pass the form with errors to the template
+            pass
     else:
         initial_data = {
             'recurrence_end': 'never',
@@ -291,10 +297,22 @@ def edit_service_frequency(request, pk):
     }
     return render(request, 'services/edit_service_frequency.html', context)
 
+@transaction.atomic
 def delete_service_frequency(request, pk):
     service_frequency = get_object_or_404(ResidentServiceFrequency, pk=pk)
     resident_pk = service_frequency.resident.pk
-    service_frequency.delete()  # This will now delete related services as well
+    
+    # Delete future services associated with this frequency
+    Service.objects.filter(
+        resident=service_frequency.resident,
+        service_type=service_frequency.service_type,
+        status__in=['unscheduled', 'scheduled'],
+        due_date__gte=timezone.now().date()
+    ).delete()
+    
+    # Delete the service frequency
+    service_frequency.delete()
+    
     messages.success(request, 'Service frequency and related uncompleted services deleted successfully.')
     return redirect('residents:resident_dashboard', pk=resident_pk)
 
@@ -305,6 +323,7 @@ def add_service_frequency(request, resident_id):
         if form.is_valid():
             service_frequency = form.save(commit=False)
             service_frequency.resident = resident
+            service_frequency.preferred_days = form.cleaned_data['preferred_days']  # This is now a JSON string
             service_frequency.save()
             
             # Schedule services based on the new frequency

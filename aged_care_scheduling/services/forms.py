@@ -26,7 +26,11 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         (5, 'Saturday'),
         (6, 'Sunday'),
     ]
-    preferred_days = forms.MultipleChoiceField(choices=DAYS_OF_WEEK, widget=forms.CheckboxSelectMultiple, required=False)
+    preferred_days = forms.MultipleChoiceField(
+        choices=DAYS_OF_WEEK,
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
     
     RECURRENCE_END_CHOICES = [
         ('never', 'Never'),
@@ -61,15 +65,30 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         
         self.fields['preferred_days'].required = False  # Set the field as not required
 
-        # If recurrence pattern is already set to daily, hide the preferred days field
-        if self.instance.recurrence_pattern == 'daily':
+        # If recurrence pattern is already set to daily or monthly, hide the preferred days field
+        if self.instance.recurrence_pattern in ['daily', 'monthly']:
             self.fields['preferred_days'].widget = forms.HiddenInput()
-            
+
+    def clean_preferred_days(self):
+        preferred_days = self.cleaned_data.get('preferred_days')
+        recurrence_pattern = self.cleaned_data.get('recurrence_pattern')
+
+        if recurrence_pattern in ['daily', 'monthly', 'yearly']:
+            return json.dumps([])  # Return an empty list for daily, monthly, yearly
+        elif recurrence_pattern == 'weekly':
+            if not preferred_days:
+                raise forms.ValidationError("Please select at least one day for weekly recurrence.")
+            return json.dumps([int(day) for day in preferred_days])
+    
     def clean(self):
         cleaned_data = super().clean()
         recurrence_pattern = cleaned_data.get('recurrence_pattern')
-        if recurrence_pattern == 'daily':
+        preferred_days = cleaned_data.get('preferred_days')
+        
+        if recurrence_pattern == 'daily' or recurrence_pattern == 'monthly' or recurrence_pattern == 'yearly':
             cleaned_data['preferred_days'] = []  # Clear any selected days when the pattern is daily
+        if recurrence_pattern == 'weekly' and not preferred_days:
+            raise forms.ValidationError("Please select at least one day for weekly recurrence.")
         recurrence_end = cleaned_data.get('recurrence_end')
         occurrences = cleaned_data.get('occurrences')
         end_date = cleaned_data.get('end_date')

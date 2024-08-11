@@ -63,13 +63,16 @@
     }
     .modal-backdrop {
     display: none;
-    z-index: 1040 !important;
     }
 
     .modal-content {
         margin: 2px auto;
-        z-index: 1100 !important;
     }
+
+    .modal-body {
+    overflow-y: auto;
+    }
+    
 </style>
 {% endblock %}
 
@@ -311,9 +314,6 @@
                 <form method="post" action="{% url 'add_service_frequency' resident.id %}" id="serviceFrequencyForm">
                     {% csrf_token %}
                     {{ service_frequency_form.as_p }}
-                    <div id="monthlyDatesField" style="display: none;">
-                        {{ service_frequency_form.monthly_dates }}
-                    </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-plus fa-icon-sm"></i> Add Service Frequency
                     </button>
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updatePreferredDaysVisibility() {
         const selectedValue = recurrencePatternSelect.value;
-        if (selectedValue === 'daily') {
+        if (selectedValue === 'daily' || selectedValue === 'monthly' || selectedValue === 'yearly') {
             preferredDaysField.style.display = 'none';
             preferredDaysLabel.style.display = 'none';
         } else {

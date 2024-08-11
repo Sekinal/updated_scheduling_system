@@ -47,7 +47,22 @@
                 <div class="card-body">
                     <form method="post" id="serviceFrequencyForm">
                         {% csrf_token %}
-                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <ul>
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="{{ form.service_type.id_for_label }}" class="form-label">Resident</label>
+                            {{ form.resident }}
+                        </div>
+
                         <div class="mb-3">
                             <label for="{{ form.service_type.id_for_label }}" class="form-label">Service Type</label>
                             {{ form.service_type }}
@@ -64,14 +79,18 @@
                             <span id="frequencyPluralize" style="margin-left: 5px;"></span>
                         </div>
                         
-                        <div class="mb-3" id="preferredDaysField">
+                        <div class="mb-3" id="preferredDaysField" style="display: none;">
                             <label for="{{ form.preferred_days.id_for_label }}" class="form-label">Preferred Days</label>
-                            {{ form.preferred_days }}
-                        </div>
-                        
-                        <div class="mb-3" id="monthlyDatesField" style="display: none;">
-                            <label for="{{ form.monthly_dates.id_for_label }}" class="form-label">Monthly Dates</label>
-                            {{ form.monthly_dates }}
+                            <div>
+                                {% for value, label in form.preferred_days.field.choices %}
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" name="{{ form.preferred_days.name }}" value="{{ value }}" id="id_preferred_days_{{ forloop.counter0 }}" {% if value|stringformat:"s" in form.preferred_days.value %}checked{% endif %}>
+                                        <label class="form-check-label" for="id_preferred_days_{{ forloop.counter0 }}">
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                         
                         <div class="mb-3">
@@ -122,73 +141,66 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
-        const frequencyLabel = document.querySelector('label[for="id_frequency"]');
-        const frequencyInput = document.getElementById('id_frequency');
-        const preferredDaysField = document.getElementById('preferredDaysField');
-        const monthlyDatesField = document.getElementById('monthlyDatesField');
-        const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
-        const occurrencesField = document.getElementById('occurrencesField');
-        const endDateField = document.getElementById('endDateField');
-        const frequencyPluralize = document.getElementById('frequencyPluralize');
+document.addEventListener('DOMContentLoaded', function() {
+    const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
+    const frequencyLabel = document.querySelector('label[for="id_frequency"]');
+    const frequencyInput = document.getElementById('id_frequency');
+    const preferredDaysField = document.getElementById('preferredDaysField');
+    const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
+    const occurrencesField = document.getElementById('occurrencesField');
+    const endDateField = document.getElementById('endDateField');
+    const frequencyPluralize = document.getElementById('frequencyPluralize');
 
-        function updateFrequencyLabel() {
-            const selectedValue = recurrencePatternSelect.value;
-            frequencyLabel.innerText = 'Recur every';
-            frequencyInput.type = 'number';
-            frequencyInput.min = '1';
-            
-            if (selectedValue === 'daily') {
-                frequencyPluralize.innerText = ' day(s)';
-            } else if (selectedValue === 'weekly') {
-                frequencyPluralize.innerText = ' week(s)';
-            } else if (selectedValue === 'monthly') {
-                frequencyPluralize.innerText = ' month(s)';
-            } else if (selectedValue === 'yearly') {
-                frequencyPluralize.innerText = ' year(s)';
-            }
+    function updateFrequencyLabel() {
+        const selectedValue = recurrencePatternSelect.value;
+        frequencyLabel.innerText = 'Recur every';
+        frequencyInput.type = 'number';
+        frequencyInput.min = '1';
+        
+        if (selectedValue === 'daily') {
+            frequencyPluralize.innerText = ' day(s)';
+        } else if (selectedValue === 'weekly') {
+            frequencyPluralize.innerText = ' week(s)';
+        } else if (selectedValue === 'monthly') {
+            frequencyPluralize.innerText = ' month(s)';
+        } else if (selectedValue === 'yearly') {
+            frequencyPluralize.innerText = ' year(s)';
         }
+    }
 
-        function updateFieldVisibility() {
-            const selectedValue = recurrencePatternSelect.value;
-            if (selectedValue === 'monthly') {
-                monthlyDatesField.style.display = 'block';
-                preferredDaysField.style.display = 'none';
-            } else {
-                monthlyDatesField.style.display = 'none';
-                if (selectedValue === 'daily' || selectedValue === 'yearly') {
-                    preferredDaysField.style.display = 'none';
-                } else {
-                    preferredDaysField.style.display = 'block';
-                }
-            }
+    function updateFieldVisibility() {
+        const selectedValue = recurrencePatternSelect.value;
+        if (selectedValue === 'weekly') {
+            preferredDaysField.style.display = 'block';
+        } else {
+            preferredDaysField.style.display = 'none';
         }
+    }
 
-        function updateRecurrenceEndVisibility() {
-            const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
-            if (selectedValue === 'after') {
-                occurrencesField.style.display = 'block';
-                endDateField.style.display = 'none';
-            } else if (selectedValue === 'on_date') {
-                occurrencesField.style.display = 'none';
-                endDateField.style.display = 'block';
-            } else {
-                occurrencesField.style.display = 'none';
-                endDateField.style.display = 'none';
-            }
+    function updateRecurrenceEndVisibility() {
+        const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
+        if (selectedValue === 'after') {
+            occurrencesField.style.display = 'block';
+            endDateField.style.display = 'none';
+        } else if (selectedValue === 'on_date') {
+            occurrencesField.style.display = 'none';
+            endDateField.style.display = 'block';
+        } else {
+            occurrencesField.style.display = 'none';
+            endDateField.style.display = 'none';
         }
+    }
 
-        recurrencePatternSelect.addEventListener('change', updateFrequencyLabel);
-        recurrencePatternSelect.addEventListener('change', updateFieldVisibility);
-        radioButtons.forEach(radio => {
-            radio.addEventListener('change', updateRecurrenceEndVisibility);
-        });
-
-        // Initial updates
-        updateFrequencyLabel();
-        updateFieldVisibility();
-        updateRecurrenceEndVisibility();
+    recurrencePatternSelect.addEventListener('change', updateFrequencyLabel);
+    recurrencePatternSelect.addEventListener('change', updateFieldVisibility);
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', updateRecurrenceEndVisibility);
     });
+
+    // Initial updates
+    updateFrequencyLabel();
+    updateFieldVisibility();
+    updateRecurrenceEndVisibility();
+});
 </script>
 {% endblock %}

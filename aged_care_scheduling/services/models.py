@@ -19,6 +19,8 @@ import uuid
 import calendar
 from dateutil.relativedelta import relativedelta
 import json
+import logging
+logger = logging.getLogger(__name__)
 
 class ServiceType(models.Model):
     name = models.CharField(max_length=100)
@@ -279,166 +281,68 @@ class ResidentServiceFrequency(models.Model):
                 )
                 
     def save(self, *args, **kwargs):
-        self.full_clean()  # This calls clean() and validates model fields
+        # Convert preferred_days to a JSON string if it's not already
+        if isinstance(self.preferred_days, list):
+            self.preferred_days = json.dumps(self.preferred_days)
         super().save(*args, **kwargs)
 
     def create_services(self):
         from .models import Service  # Import here to avoid circular import
         
         current_date = self.start_date
-        end_date = self.end_date
         occurrences = 0
+        preferred_days = json.loads(self.preferred_days)
+        
+        logger.info(f"Starting service creation for {self.resident} - {self.service_type}")
+        logger.info(f"Start date: {current_date}, Recurrence: {self.recurrence_pattern}, Frequency: {self.frequency}")
+        logger.info(f"Preferred days: {preferred_days}")
 
-        if self.recurrence_pattern == 'daily':
-            while True:
-                if self.should_create_service(current_date):
-                    Service.objects.create(
-                        resident=self.resident,
-                        service_type=self.service_type,
-                        status='unscheduled',
-                        due_date=current_date,
-                        scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
-                        end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
-                        frequency_id=self.id
-                    )
-                    occurrences += 1
+        end_date = self.end_date or (timezone.now().date() + timedelta(days=365))  # Default to 1 year if no end date
 
-                # Check if we should stop creating services
-                if self.recurrence_end == 'never':
-                    if current_date >= timezone.now().date() + timedelta(days=365):  # Limit to 1 year in advance
-                        break
-                elif self.recurrence_end == 'after':
-                    if occurrences >= self.occurrences:
-                        break
-                elif self.recurrence_end == 'on_date':
-                    if current_date >= self.end_date:
-                        break
+        while current_date <= end_date:
+            if self.should_create_service(current_date):
+                if self.recurrence_pattern != 'weekly' or current_date.weekday() in preferred_days:
+                    try:
+                        Service.objects.create(
+                            resident=self.resident,
+                            service_type=self.service_type,
+                            status='unscheduled',
+                            due_date=current_date,
+                            scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
+                            end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
+                            frequency_id=self.id
+                        )
+                        occurrences += 1
+                        logger.info(f"Created service for {current_date}")
+                    except Exception as e:
+                        logger.error(f"Error creating service for {current_date}: {str(e)}")
 
-                # Move to the next date based on recurrence pattern
+            # Move to the next date based on recurrence pattern
+            if self.recurrence_pattern == 'daily':
                 current_date += timedelta(days=self.frequency)
-
-        elif self.recurrence_pattern == 'weekly':
-            # Get the selected days of the week
-            selected_days = json.loads(self.preferred_days)
-
-            # Calculate the first day of the week that matches the selected days
-            first_day = current_date
-            while first_day.weekday() not in selected_days:
-                first_day += timedelta(days=1)
-
-            # Schedule services on the selected days of the week
-            while True:
-                for day in range(7):
-                    current_date = first_day + timedelta(days=day)
-                    if current_date.weekday() in selected_days:
-                        if self.should_create_service(current_date):
-                            Service.objects.create(
-                                resident=self.resident,
-                                service_type=self.service_type,
-                                status='unscheduled',
-                                due_date=current_date,
-                                scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
-                                end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
-                                frequency_id=self.id
-                            )
-                            occurrences += 1
-
-                # Check if we should stop creating services
-                if self.recurrence_end == 'never':
-                    if current_date >= timezone.now().date() + timedelta(days=365):  # Limit to 1 year in advance
-                        break
-                elif self.recurrence_end == 'after':
-                    if occurrences >= self.occurrences:
-                        break
-                elif self.recurrence_end == 'on_date':
-                    if current_date >= self.end_date:
-                        break
-
-                # Move to the next week
-                first_day += timedelta(days=7 * self.frequency)
-                current_date = first_day
-
-        elif self.recurrence_pattern == 'monthly':
-            # Get the selected day of the month
-            day_of_month = current_date.day
-
-            # Schedule services on the selected day of the month
-            while True:
-                if self.should_create_service(current_date):
-                    Service.objects.create(
-                        resident=self.resident,
-                        service_type=self.service_type,
-                        status='unscheduled',
-                        due_date=current_date,
-                        scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
-                        end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
-                        frequency_id=self.id
-                    )
-                    occurrences += 1
-
-                # Check if we should stop creating services
-                if self.recurrence_end == 'never':
-                    if current_date >= timezone.now().date() + timedelta(days=365 * 5):  # Limit to 5 years in advance
-                        break
-                elif self.recurrence_end == 'after':
-                    if occurrences >= self.occurrences:
-                        break
-                elif self.recurrence_end == 'on_date':
-                    if current_date >= self.end_date:
-                        break
-
-                # Move to the next month
+            elif self.recurrence_pattern == 'weekly':
+                current_date += timedelta(days=1)
+            elif self.recurrence_pattern == 'monthly':
                 current_date += relativedelta(months=self.frequency)
-                # Set the day to the selected day of the month
-                current_date = current_date.replace(day=day_of_month)
-                # If the day does not exist in the month (e.g., February 30), set it to the last day of the month
-                if current_date.day != day_of_month:
-                    current_date = current_date + relativedelta(day=1, months=1, days=-1)
-
-        elif self.recurrence_pattern == 'yearly':
-            # Schedule services on the selected day of the year
-            while True:
-                if self.should_create_service(current_date):
-                    Service.objects.create(
-                        resident=self.resident,
-                        service_type=self.service_type,
-                        status='unscheduled',
-                        due_date=current_date,
-                        scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
-                        end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
-                        frequency_id=self.id
-                    )
-                    occurrences += 1
-
-                # Check if we should stop creating services
-                if self.recurrence_end == 'never':
-                    if current_date >= timezone.now().date() + timedelta(days=365 * 10):  # Limit to 10 years in advance
-                        break
-                elif self.recurrence_end == 'after':
-                    if occurrences >= self.occurrences:
-                        break
-                elif self.recurrence_end == 'on_date':
-                    if current_date >= self.end_date:
-                        break
-
-                # Move to the next year
+            elif self.recurrence_pattern == 'yearly':
                 current_date += relativedelta(years=self.frequency)
 
-    def should_create_service(self, date):
-        preferred_days = json.loads(self.preferred_days)
-        if preferred_days and date.weekday() not in preferred_days:
-            return False
+            if self.recurrence_end == 'after' and occurrences >= self.occurrences:
+                break
 
+        logger.info(f"Finished creating services. Total occurrences: {occurrences}")
+
+    def should_create_service(self, date):
         if self.recurrence_pattern == 'daily':
             return (date - self.start_date).days % self.frequency == 0
         elif self.recurrence_pattern == 'weekly':
-            return (date - self.start_date).days % (7 * self.frequency) == 0
+            preferred_days = json.loads(self.preferred_days)
+            return date.weekday() in preferred_days
         elif self.recurrence_pattern == 'monthly':
-            return date.day == self.start_date.day and (date.year - self.start_date.year) * 12 + date.month - self.start_date.month % self.frequency == 0
+            return date.day == self.start_date.day
         elif self.recurrence_pattern == 'yearly':
-            return date.month == self.start_date.month and date.day == self.start_date.day and (date.year - self.start_date.year) % self.frequency == 0
+            return date.month == self.start_date.month and date.day == self.start_date.day
         return False
-
     def delete(self, *args, **kwargs):
         # Delete all related services that haven't been completed
         Service.objects.filter(
