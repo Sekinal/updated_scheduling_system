@@ -348,7 +348,7 @@ class ResidentServiceFrequency(models.Model):
         Service.objects.filter(
             resident=self.resident,
             service_type=self.service_type,
-            status__in=['unscheduled', 'scheduled'],
+            status__in=['scheduled'],
             frequency_id=self.id
         ).delete()
         super().delete(*args, **kwargs)
