@@ -1,6 +1,7 @@
 # residents/views.py
 
 from django.urls import reverse
+import calendar
 from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Resident
@@ -173,7 +174,7 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['resident'] = self.resident
         context['service_types'] = ServiceType.objects.all()
-        context['months'] = [month.name for month in Service.objects.dates('due_date', 'month')]
+        context['months'] = [calendar.month_name[month.month] for month in Service.objects.dates('due_date', 'month')]
         context['caregivers'] = UserProfile.objects.filter(role='staff', user__is_active=True)
         return context
 
