@@ -16,6 +16,7 @@ from django.core.validators import MinValueValidator
 from django.db import transaction
 from datetime import datetime
 import uuid
+from homes.models import CareHome
 import calendar
 from dateutil.relativedelta import relativedelta
 import json
@@ -408,9 +409,13 @@ class ResidentPreference(models.Model):
         return f"Preference for {self.resident} - {self.service_type}"
 
 class BlockedTime(models.Model):
-    start_time = models.DateTimeField(null=True)
-    end_time = models.DateTimeField(null=True)
+    caregivers = models.ManyToManyField(User, blank=True, related_name='blocked_times')
+    locations = models.ManyToManyField(CareHome, blank=True, related_name='blocked_times')
+    start_date = models.DateField(null=True)
+    start_time = models.TimeField(null=True)
+    end_date = models.DateField(null=True)
+    end_time = models.TimeField(null=True)
     reason = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Blocked time: {self.start_time} - {self.end_time}"
+        return f"Blocked time: {self.start_date} {self.start_time} - {self.end_date} {self.end_time}"

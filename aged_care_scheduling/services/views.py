@@ -179,7 +179,6 @@ class BlockedTimeDeleteView(LoginRequiredMixin, DeleteView):
     model = BlockedTime
     template_name = 'services/blocked_time_confirm_delete.html'
     success_url = reverse_lazy('blocked_time_list')
-    
 class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
     model = Service
     form_class = ServiceForm

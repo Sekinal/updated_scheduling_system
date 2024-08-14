@@ -198,13 +198,20 @@ class ResidentPreferenceForm(forms.ModelForm):
         model = ResidentPreference
         fields = ['resident', 'service_type', 'preferred_days', 'preferred_time_start', 'preferred_time_end']
 
+# services/forms.py
+
 class BlockedTimeForm(forms.ModelForm):
     class Meta:
         model = BlockedTime
-        fields = ['start_time', 'end_time', 'reason']
+        fields = ['caregivers', 'locations', 'start_date', 'start_time', 'end_date', 'end_time', 'reason']
         widgets = {
-            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'caregivers': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'locations': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'reason': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
 class EscalationForm(forms.ModelForm):

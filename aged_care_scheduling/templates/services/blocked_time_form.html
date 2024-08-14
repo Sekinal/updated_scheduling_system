@@ -24,11 +24,33 @@
     <form method="post" class="needs-validation" novalidate>
       {% csrf_token %}
       <div class="mb-3">
-        <label for="{{ form.resident.id_for_label }}" class="form-label">{{ form.resident.label }}</label>
-        {{ form.resident }}
-        {% if form.resident.errors %}
+        <label for="{{ form.caregivers.id_for_label }}" class="form-label">{{ form.caregivers.label }}</label>
+        {{ form.caregivers }}
+        {% if form.caregivers.errors %}
           <div class="invalid-feedback d-block">
-            {% for error in form.resident.errors %}
+            {% for error in form.caregivers.errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="{{ form.locations.id_for_label }}" class="form-label">{{ form.locations.label }}</label>
+        {{ form.locations }}
+        {% if form.locations.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.locations.errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="{{ form.start_date.id_for_label }}" class="form-label">{{ form.start_date.label }}</label>
+        {{ form.start_date }}
+        {% if form.start_date.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.start_date.errors %}
               {{ error }}
             {% endfor %}
           </div>
@@ -40,6 +62,17 @@
         {% if form.start_time.errors %}
           <div class="invalid-feedback d-block">
             {% for error in form.start_time.errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="{{ form.end_date.id_for_label }}" class="form-label">{{ form.end_date.label }}</label>
+        {{ form.end_date }}
+        {% if form.end_date.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.end_date.errors %}
               {{ error }}
             {% endfor %}
           </div>
@@ -68,7 +101,7 @@
         {% endif %}
       </div>
       <button type="submit" class="btn btn-primary">Save</button>
-      <a href="{% url 'service_list' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% url 'blocked_time_list' %}" class="btn btn-secondary">Cancel</a>
     </form>
   </div>
 {% endblock %}
