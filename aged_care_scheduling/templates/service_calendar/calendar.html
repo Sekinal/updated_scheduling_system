@@ -4,6 +4,28 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" />
 
+    <style>
+        .fc-event-title {
+            white-space: pre-line;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 15px; /* Make room for the blue rectangle */
+            position: relative; /* For absolute positioning of the rectangle */
+        }
+        .fc-event-rectangle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px; /* Adjust this for the thickness of the rectangle */
+            background-color: #007bff; /* Blue color, you can adjust as needed */
+        }
+        .fc-event-blocked {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+    </style>
+
     <div class="container">
         <div class="row mb-3">
             <div class="col-md-4">
@@ -46,6 +68,12 @@
         $(document).ready(function() {
             $('#caregiver-select, #resident-select, #care-home-select').select2();
     
+            function formatEventTitle(event) {
+                var startTime = new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                var endTime = new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                return startTime + ' - ' + endTime + '\n' + event.resident;
+            }
+    
             var calendarEl = document.getElementById('calendar');
             if (calendarEl) {
                 var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -58,8 +86,26 @@
                     views: {
                         listMonth: { buttonText: 'List' }
                     },
-                    eventDidMount: function(info) {
-                        if (info.view.type === 'listMonth') {
+                    eventContent: function(arg) {
+                    if (arg.event.extendedProps.type === 'blocked') {
+                        return {
+                            html: '<div class="fc-event-main">' + arg.event.title + '</div>'
+                        };
+                    } else {
+                        return {
+                            html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + arg.event.title + '</div>'
+                        };
+                    }
+                },
+                eventClassNames: function(arg) {
+                    if (arg.event.extendedProps.type === 'blocked') {
+                        return ['fc-event-blocked'];
+                    }
+                    return [];
+                },
+                eventDidMount: function(info) {
+                    if (info.view.type === 'listMonth') {
+                        if (info.event.extendedProps.type !== 'blocked') {
                             var editButton = $('<button>', {
                                 text: 'Edit',
                                 class: 'fc-button fc-button-primary fc-button-tiny',
@@ -72,7 +118,7 @@
                                     window.location.href = '/services/' + info.event.id + '/update/';
                                 }
                             });
-    
+
                             var deleteButton = $('<button>', {
                                 text: 'Delete',
                                 class: 'fc-button fc-button-primary fc-button-tiny',
@@ -89,12 +135,13 @@
                                     }
                                 }
                             });
-    
+
                             $(info.el).find('.fc-list-event-title')
                                 .append(editButton)
                                 .append(deleteButton);
                         }
-                    },
+                    }
+                },
                     events: function(info, successCallback, failureCallback) {
                         var caregivers = $('#caregiver-select').val() || [];
                         var residents = $('#resident-select').val() || [];
@@ -110,8 +157,20 @@
                                 care_homes: careHomes.join(','),
                             },
                             success: function(data) {
-                                successCallback(data);
-                            },
+                            var events = data.map(function(event) {
+                                return {
+                                    id: event.id,
+                                    title: event.type === 'blocked' ? event.title : formatEventTitle(event),
+                                    start: event.start,
+                                    end: event.end,
+                                    allDay: false,
+                                    extendedProps: {
+                                        type: event.type
+                                    }
+                                };
+                            });
+                            successCallback(events);
+                        },
                             error: function(jqXHR, textStatus, errorThrown) {
                                 console.error('Failed to fetch events:', textStatus, errorThrown);
                                 failureCallback();

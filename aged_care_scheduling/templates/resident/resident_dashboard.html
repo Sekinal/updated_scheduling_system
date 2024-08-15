@@ -65,13 +65,20 @@
     display: none;
     }
 
-    .modal-content {
-        margin: 2px auto;
-    }
+    .modal-dialog {
+    max-height: 90vh;
+    display: flex;
+}
 
-    .modal-body {
+.modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body {
     overflow-y: auto;
-    }
+}
     
 </style>
 {% endblock %}
@@ -302,7 +309,7 @@
 
 <!-- Add Service Frequency Modal -->
 <div class="modal fade" id="addServiceFrequencyModal" tabindex="-1" aria-labelledby="addServiceFrequencyModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addServiceFrequencyModalLabel">

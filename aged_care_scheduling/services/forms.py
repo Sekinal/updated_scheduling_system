@@ -11,6 +11,7 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 import json
+from homes.models import CareHome
 from .models import ResidentServiceFrequency, ServiceType
 import calendar
 from django.utils import timezone
@@ -201,12 +202,21 @@ class ResidentPreferenceForm(forms.ModelForm):
 # services/forms.py
 
 class BlockedTimeForm(forms.ModelForm):
+    caregivers = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(userprofile__role='staff'),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2'}),
+        required=False
+    )
+    locations = forms.ModelMultipleChoiceField(
+        queryset=CareHome.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2'}),
+        required=False
+    )
+
     class Meta:
         model = BlockedTime
         fields = ['caregivers', 'locations', 'start_date', 'start_time', 'end_date', 'end_time', 'reason']
         widgets = {
-            'caregivers': forms.SelectMultiple(attrs={'class': 'form-control'}),
-            'locations': forms.SelectMultiple(attrs={'class': 'form-control'}),
             'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),

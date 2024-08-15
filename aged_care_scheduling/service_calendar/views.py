@@ -43,5 +43,6 @@ def get_events(request):
         'title': f"{service.service_type.name} - {service.resident.first_name} {service.resident.last_name}",
         'start': service.scheduled_time.isoformat(),
         'end': service.end_time.isoformat(),
+        'resident': f"{service.resident.first_name} {service.resident.last_name}"
     } for service in services]
     return JsonResponse(events, safe=False)
