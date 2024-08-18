@@ -3,9 +3,13 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 
-from services.models import Service, ServiceType
+from services.models import Service, ServiceType, BlockedTime
 from residents.models import Resident
 from homes.models import CareHome
+from django.db.models import Q  # Import Q for complex queries
+from django.utils import timezone  # Import timezone for date and time handling
+from datetime import datetime, timedelta
+from dateutil import parser
 
 @login_required
 def calendar_view(request):
@@ -22,8 +26,12 @@ def calendar_view(request):
 
 @login_required
 def get_events(request):
-    start = request.GET.get('start')
-    end = request.GET.get('end')
+    def parse_date(date_string):
+        return parser.isoparse(date_string)
+
+    start = parse_date(request.GET.get('start'))
+    end = parse_date(request.GET.get('end'))
+
     caregivers = request.GET.get('caregivers', '').split(',')
     residents = request.GET.get('residents', '').split(',')
     care_homes = request.GET.get('care_homes', '').split(',')
@@ -49,6 +57,30 @@ def get_events(request):
         'start': service.scheduled_time.isoformat(),
         'end': service.end_time.isoformat(),
         'resident': f"{service.resident.first_name} {service.resident.last_name}",
-        'serviceType': service.service_type.name
+        'serviceType': service.service_type.name,
+        'type': 'service'
     } for service in services]
+    
+    blocked_times = BlockedTime.objects.filter(
+        Q(start_date__range=[start.date(), end.date()]) | Q(end_date__range=[start.date(), end.date()])
+    )
+
+    for blocked in blocked_times:
+        current_start = timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time))
+        current_end = timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time))
+        while current_start < current_end:
+            day_end = min(current_end, current_start + timezone.timedelta(days=1))
+            events.append({
+                'id': f"blocked_{blocked.id}",
+                'title': f"Blocked: {blocked.reason}",
+                'start': current_start.isoformat(),
+                'end': day_end.isoformat(),
+                'type': 'blocked',
+                'startDate': blocked.start_date.isoformat(),
+                'startTime': blocked.start_time.isoformat(),
+                'endDate': blocked.end_date.isoformat(),
+                'endTime': blocked.end_time.isoformat(),
+            })
+            current_start = day_end
+
     return JsonResponse(events, safe=False)

@@ -1,275 +1,397 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 
-    <style>
-        .fc-event-title {
-            white-space: pre-line;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-left: 15px; /* Make room for the blue rectangle */
-            position: relative; /* For absolute positioning of the rectangle */
-        }
-        .fc-event-rectangle {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px; /* Adjust this for the thickness of the rectangle */
-            background-color: #007bff; /* Blue color, you can adjust as needed */
-        }
-        .fc-event-blocked {
-            background-color: #dc3545;
-            border-color: #dc3545;
-        }
-        .fc-timegrid-event .fc-event-title {
-            white-space: normal;
-            overflow: visible;
-        }
-        .select2-container {
+<style>
+    .calendar-container {
+        font-family: 'Roboto', sans-serif;
+        background-color: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-top: 30px;
+    }
+    .fc {
+        background-color: #fff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 15px rgba(0,0,0,0.05);
+    }
+    .fc-toolbar-title {
+        font-size: 1.5em !important;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    .fc-button-primary {
+        background-color: #3498db !important;
+        border-color: #3498db !important;
+        transition: all 0.3s ease;
+    }
+    .fc-button-primary:hover {
+        background-color: #2980b9 !important;
+        border-color: #2980b9 !important;
+    }
+    .fc-event {
+        border: none !important;
+        border-radius: 5px !important;
+        transition: all 0.3s ease;
+    }
+    .fc-event:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .fc-event-title {
+        font-weight: 500;
+        padding: 5px 10px;
+        white-space: pre-line;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-left: 15px;
+        position: relative;
+    }
+    .fc-event-rectangle {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background-color: #007bff;
+    }
+    .fc-event-blocked {
+        background-color: #e74c3c;
+        border-color: #e74c3c;
+    }
+    .fc-timegrid-event .fc-event-title {
+        white-space: normal;
+        overflow: visible;
+    }
+    .select2-container {
         width: 100% !important;
     }
-
+    .select2-container--default .select2-selection--multiple {
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #3498db;
+        color: #fff;
+        border: none;
+    }
     .select2-selection--multiple {
         overflow: hidden !important;
         height: auto !important;
     }
-    </style>
+    #apply-filter {
+        background-color: #2ecc71;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    #apply-filter:hover {
+        background-color: #27ae60;
+        transform: translateY(-2px);
+    }
+    .filter-section {
+        background-color: #ecf0f1;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .filter-title {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 15px;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    .fc-event.fc-event-blocked {
+    background-color: #ffebee !important;
+    border: 1px solid #ffcdd2 !important;
+}
 
-    <div class="container">
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <label for="caregiver-select">Caregiver:</label>
+.fc-event.fc-event-blocked .fc-event-main {
+    color: #c62828;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.fc-event.fc-event-blocked .fc-event-main:before {
+    content: '\f05e';
+    font-family: 'Font Awesome 5 Free';
+    margin-right: 5px;
+    font-weight: 900;
+}
+
+.fc-daygrid-event.fc-event-blocked {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fc-list-event.fc-event-blocked td {
+    background-color: #ffebee !important;
+}
+
+.fc-list-event.fc-event-blocked .fc-list-event-dot {
+    border-color: #c62828 !important;
+}
+
+.fc-list-event-dot {
+    display: none !important;
+}
+</style>
+
+<div class="calendar-container fade-in">
+    <h1 class="text-center mb-4">Service Calendar</h1>
+    <div class="filter-section">
+        <h2 class="filter-title"><i class="fas fa-filter"></i> Filters</h2>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
                 <select id="caregiver-select" class="form-control" multiple>
                     {% for caregiver in caregivers %}
                         <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
-                <label for="resident-select">Resident:</label>
+            <div class="col-md-3 mb-3">
+                <label for="resident-select"><i class="fas fa-user"></i> Resident:</label>
                 <select id="resident-select" class="form-control" multiple>
                     {% for resident in residents %}
                         <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
-                <label for="care-home-select">Care Home:</label>
+            <div class="col-md-3 mb-3">
+                <label for="care-home-select"><i class="fas fa-home"></i> Care Home:</label>
                 <select id="care-home-select" class="form-control" multiple>
                     {% for care_home in care_homes %}
                         <option value="{{ care_home.id }}">{{ care_home.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="service-type-select">Service Type:</label>
+            <div class="col-md-3 mb-3">
+                <label for="service-type-select"><i class="fas fa-clipboard-list"></i> Service Type:</label>
                 <select id="service-type-select" class="form-control" multiple>
                     {% for service_type in service_types %}
                         <option value="{{ service_type.id }}">{{ service_type.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-12 mt-3">
-                <button id="apply-filter" class="btn btn-primary">Apply Filter</button>
-            </div>
         </div>
-        <div id="calendar"></div>
+        <div class="text-center mt-3">
+            <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
+        </div>
     </div>
+    <div id="calendar"></div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
-    <script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+
+<script>
 $(document).ready(function() {
+    $('.select2-container').addClass('fade-in');
+    
     $('#caregiver-select, #resident-select, #care-home-select, #service-type-select').select2({
         placeholder: "Select items",
-        allowClear: true
+        allowClear: true,
+        theme: "classic"
     });
     
-            function formatEventTitle(event) {
-                var startTime = new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                var endTime = new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                return startTime + ' - ' + endTime + '\n' + event.resident;
-            }
-    
-            var calendarEl = document.getElementById('calendar');
-            if (calendarEl) {
-                var calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
-                    },
-                    views: {
-                        listMonth: { buttonText: 'List' }
-                    },
-                    eventContent: function(arg) {
-                    if (arg.event.extendedProps.type === 'blocked') {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+            },
+            
+            views: {
+                listMonth: { buttonText: 'List' }
+            },
+            eventContent: function(arg) {
+                if (arg.event.extendedProps.type === 'blocked') {
+                    return {
+                        html: '<div class="fc-event-main">' + arg.event.title + '</div>'
+                    };
+                } else {
+                    var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    var timeString = startTime + ' - ' + endTime;
+                    var residentName = arg.event.extendedProps.resident;
+                    
+                    if (arg.view.type === 'dayGridMonth') {
                         return {
-                            html: '<div class="fc-event-main">' + arg.event.title + '</div>'
+                            html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>'
                         };
                     } else {
-                        var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        var timeString = startTime + ' - ' + endTime;
-                        var residentName = arg.event.extendedProps.resident;
-                        
-                        if (arg.view.type === 'dayGridMonth') {
-                            return {
-                                html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>'
-                            };
-                        } else {
-                            return {
-                                html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + ' ' + residentName + '</div>'
-                            };
-                        }
-                    }
-                },
-                eventClassNames: function(arg) {
-                    if (arg.event.extendedProps.type === 'blocked') {
-                        return ['fc-event-blocked'];
-                    }
-                    return [];
-                },
-                eventDidMount: function(info) {
-    if (info.view.type === 'listMonth') {
-        if (info.event.extendedProps.type !== 'blocked') {
-            var editButton = $('<button>', {
-                text: 'Edit',
-                class: 'fc-button fc-button-primary fc-button-tiny',
-                css: {
-                    'font-size': '0.7em',
-                    'padding': '2px 5px',
-                    'margin-left': '5px'
-                },
-                click: function(e) {
-                    e.preventDefault();
-                    // Create a custom modal for edit options
-                    var modal = $('<div>', {
-                        class: 'modal fade',
-                        tabindex: '-1',
-                        role: 'dialog'
-                    }).appendTo('body');
-
-                    var modalDialog = $('<div>', {
-                        class: 'modal-dialog',
-                        role: 'document'
-                    }).appendTo(modal);
-
-                    var modalContent = $('<div>', {
-                        class: 'modal-content'
-                    }).appendTo(modalDialog);
-
-                    var modalHeader = $('<div>', {
-                        class: 'modal-header'
-                    }).appendTo(modalContent);
-
-                    $('<h5>', {
-                        class: 'modal-title',
-                        text: 'Edit Options'
-                    }).appendTo(modalHeader);
-
-                    var modalBody = $('<div>', {
-                        class: 'modal-body'
-                    }).appendTo(modalContent);
-
-                    $('<button>', {
-                        text: 'Edit Service Frequency',
-                        class: 'btn btn-primary btn-block mb-2',
-                        click: function() {
-                            window.location.href = '/services/frequency/' + info.event.id + '/edit/';
-                        }
-                    }).appendTo(modalBody);
-
-                    $('<button>', {
-                        text: 'Edit This Service Instance',
-                        class: 'btn btn-secondary btn-block',
-                        click: function() {
-                            window.location.href = '/services/' + info.event.id + '/update/';
-                        }
-                    }).appendTo(modalBody);
-
-                    modal.modal('show');
-                }
-            });
-
-            var deleteButton = $('<button>', {
-                text: 'Delete',
-                class: 'fc-button fc-button-primary fc-button-tiny',
-                css: {
-                    'font-size': '0.7em',
-                    'padding': '2px 5px',
-                    'margin-left': '5px',
-                    'background-color': '#dc3545',
-                    'border-color': '#dc3545'
-                },
-                click: function() {
-                    if (confirm('Are you sure you want to delete this service?')) {
-                        window.location.href = '/services/' + info.event.id + '/delete/';
+                        return {
+                            html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + ' ' + residentName + '</div>'
+                        };
                     }
                 }
-            });
-
-            $(info.el).find('.fc-list-event-title')
-                .append(editButton)
-                .append(deleteButton);
-        }
-    }
-},
-                events: function(info, successCallback, failureCallback) {
-    var caregivers = $('#caregiver-select').val() || [];
-    var residents = $('#resident-select').val() || [];
-    var careHomes = $('#care-home-select').val() || [];
-    var serviceTypes = $('#service-type-select').val() || [];
-
-    $.ajax({
-        url: '{% url "get_events" %}',
-        data: {
-            start: info.startStr,
-            end: info.endStr,
-            caregivers: caregivers.join(','),
-            residents: residents.join(','),
-            care_homes: careHomes.join(','),
-            service_types: serviceTypes.join(','),
-        },
-                            success: function(data) {
-        var events = data.map(function(event) {
-            return {
-                id: event.id,
-                title: event.type === 'blocked' ? event.title : event.resident, // Use resident as title
-                start: event.start,
-                end: event.end,
-                allDay: false,
-                extendedProps: {
-                    type: event.type,
-                    resident: event.resident
+            },
+            eventClassNames: function(arg) {
+                if (arg.event.extendedProps.type === 'blocked') {
+                    return ['fc-event-blocked'];
                 }
-            };
-        });
-        successCallback(events);
-    },
-                            error: function(jqXHR, textStatus, errorThrown) {
-                                console.error('Failed to fetch events:', textStatus, errorThrown);
-                                failureCallback();
+                return [];
+            },
+            eventDidMount: function(info) {
+                if (info.view.type === 'listMonth') {
+                    if (info.event.extendedProps.type !== 'blocked') {
+                        var editButton = $('<button>', {
+                            text: 'Edit',
+                            class: 'fc-button fc-button-primary fc-button-tiny',
+                            css: {
+                                'font-size': '0.7em',
+                                'padding': '2px 5px',
+                                'margin-left': '5px'
+                            },
+                            click: function(e) {
+                                e.preventDefault();
+                                var modal = $('<div>', {
+                                    class: 'modal fade',
+                                    tabindex: '-1',
+                                    role: 'dialog'
+                                }).appendTo('body');
+
+                                var modalDialog = $('<div>', {
+                                    class: 'modal-dialog',
+                                    role: 'document'
+                                }).appendTo(modal);
+
+                                var modalContent = $('<div>', {
+                                    class: 'modal-content'
+                                }).appendTo(modalDialog);
+
+                                var modalHeader = $('<div>', {
+                                    class: 'modal-header'
+                                }).appendTo(modalContent);
+
+                                $('<h5>', {
+                                    class: 'modal-title',
+                                    text: 'Edit Options'
+                                }).appendTo(modalHeader);
+
+                                var modalBody = $('<div>', {
+                                    class: 'modal-body'
+                                }).appendTo(modalContent);
+
+                                $('<button>', {
+                                    text: 'Edit Service Frequency',
+                                    class: 'btn btn-primary btn-block mb-2',
+                                    click: function() {
+                                        window.location.href = '/services/frequency/' + info.event.id + '/edit/';
+                                    }
+                                }).appendTo(modalBody);
+
+                                $('<button>', {
+                                    text: 'Edit This Service Instance',
+                                    class: 'btn btn-secondary btn-block',
+                                    click: function() {
+                                        window.location.href = '/services/' + info.event.id + '/update/';
+                                    }
+                                }).appendTo(modalBody);
+
+                                modal.modal('show');
                             }
                         });
+
+                        var deleteButton = $('<button>', {
+                            text: 'Delete',
+                            class: 'fc-button fc-button-primary fc-button-tiny',
+                            css: {
+                                'font-size': '0.7em',
+                                'padding': '2px 5px',
+                                'margin-left': '5px',
+                                'background-color': '#dc3545',
+                                'border-color': '#dc3545'
+                            },
+                            click: function() {
+                                if (confirm('Are you sure you want to delete this service?')) {
+                                    window.location.href = '/services/' + info.event.id + '/delete/';
+                                }
+                            }
+                        });
+
+                        $(info.el).find('.fc-list-event-title')
+                            .append(editButton)
+                            .append(deleteButton);
+                    }
+                }
+            },
+            events: function(info, successCallback, failureCallback) {
+                var caregivers = $('#caregiver-select').val() || [];
+                var residents = $('#resident-select').val() || [];
+                var careHomes = $('#care-home-select').val() || [];
+                var serviceTypes = $('#service-type-select').val() || [];
+
+                $.ajax({
+                    url: '{% url "get_events" %}',
+                    data: {
+                        start: info.startStr,
+                        end: info.endStr,
+                        caregivers: caregivers.join(','),
+                        residents: residents.join(','),
+                        care_homes: careHomes.join(','),
+                        service_types: serviceTypes.join(','),
                     },
-                    dayMaxEvents: true,
+                    success: function(data) {
+                        var events = data.map(function(event) {
+                            return {
+                                id: event.id,
+                                title: event.type === 'blocked' ? event.title : event.resident,
+                                start: event.start,
+                                end: event.end,
+                                allDay: false,
+                                extendedProps: {
+                                    type: event.type,
+                                    resident: event.resident
+                                }
+                            };
+                        });
+                        successCallback(events);
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error('Failed to fetch events:', textStatus, errorThrown);
+                        failureCallback();
+                    }
                 });
-                calendar.render();
-    
-                $('#apply-filter').on('click', function() {
-                    calendar.refetchEvents();
-                });
-            } else {
-                console.error('Calendar element not found');
-            }
+            },
+            dayMaxEvents: 2,
         });
-    </script>
+        calendar.render();
+
+        $('#apply-filter').on('click', function() {
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Applying...').prop('disabled', true);
+            calendar.refetchEvents().then(function() {
+                $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
+            });
+        });
+    } else {
+        console.error('Calendar element not found');
+    }
+});
+</script>
 {% endblock %}
