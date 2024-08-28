@@ -30,4 +30,6 @@ urlpatterns = [
     path('edit-service-frequency/<int:pk>/', views.edit_service_frequency, name='edit_service_frequency'),
     path('delete-service-frequency/<int:pk>/', views.delete_service_frequency, name='delete_service_frequency'),
     path('resident/<int:resident_id>/add-service-frequency/', views.add_service_frequency, name='add_service_frequency'),
+    path('update_event/', views.update_event, name='update_event'),
+
 ]

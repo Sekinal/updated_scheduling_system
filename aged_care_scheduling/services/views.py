@@ -21,6 +21,8 @@ from django.views.generic import View
 from django.utils import timezone
 from .models import ResidentServiceFrequency
 from .forms import ResidentServiceFrequencyForm
+from django.views.decorators.http import require_POST
+from django.utils.dateparse import parse_datetime
 
 class ServiceTypeListView(LoginRequiredMixin, ListView):
     model = ServiceType
@@ -346,3 +348,20 @@ def get_service_type_duration(request, service_type_id):
         return JsonResponse({'duration': duration_minutes})
     except ServiceType.DoesNotExist:
         return JsonResponse({'error': 'Service type not found'}, status=404)
+    
+@require_POST
+def update_event(request):
+    event_id = request.POST.get('id')
+    start_time = parse_datetime(request.POST.get('start'))
+    end_time = parse_datetime(request.POST.get('end'))
+
+    try:
+        service = Service.objects.get(id=event_id)
+        service.scheduled_time = start_time
+        service.end_time = end_time
+        service.save()
+        return JsonResponse({'status': 'success'})
+    except Service.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Service not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

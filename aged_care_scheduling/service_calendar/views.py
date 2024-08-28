@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 
+
 from services.models import Service, ServiceType, BlockedTime
 from residents.models import Resident
 from homes.models import CareHome
