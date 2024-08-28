@@ -73,15 +73,18 @@ class Service(models.Model):
         if self.scheduled_time:
             # Check if the service time falls within any blocked time
             blocked = BlockedTime.objects.filter(
-                start_date__lte=self.scheduled_time.date(),
-                end_date__gte=self.scheduled_time.date(),
-                start_time__lte=self.scheduled_time.time(),
-                end_time__gte=self.scheduled_time.time()
+                Q(start_date__lte=self.scheduled_time.date(), end_date__gte=self.scheduled_time.date()) &
+                Q(start_time__lte=self.scheduled_time.time(), end_time__gte=self.scheduled_time.time()) &
+                (
+                    Q(caregivers=self.caregiver) |
+                    Q(locations=self.resident.care_home) |
+                    Q(caregivers__isnull=True, locations__isnull=True)  # Care home-wide blocked times
+                )
             ).exists()
 
             if blocked:
                 self.status = 'unscheduled'
-            else:
+            elif self.status != 'unscheduled':  # Only change to scheduled if it's not explicitly set to unscheduled
                 self.status = 'scheduled'
 
         if self.scheduled_time and not self.end_time:
@@ -295,7 +298,7 @@ class ResidentServiceFrequency(models.Model):
         super().save(*args, **kwargs)
 
     def create_services(self):
-        from .models import Service  # Import here to avoid circular import
+        from .models import Service, BlockedTime  # Import here to avoid circular import
         
         current_date = self.start_date
         occurrences = 0
@@ -311,18 +314,33 @@ class ResidentServiceFrequency(models.Model):
             if self.should_create_service(current_date):
                 if self.recurrence_pattern != 'weekly' or current_date.weekday() in preferred_days:
                     try:
+                        scheduled_time = timezone.make_aware(datetime.combine(current_date, self.start_time))
+                        end_time = timezone.make_aware(datetime.combine(current_date, self.end_time))
+                        
+                        # Check if the service time falls within any blocked time
+                        blocked = BlockedTime.objects.filter(
+                            Q(start_date__lte=current_date, end_date__gte=current_date) &
+                            (
+                                Q(caregivers=self.caregiver) |
+                                Q(locations=self.resident.care_home) |
+                                Q(caregivers__isnull=True, locations__isnull=True)  # Care home-wide blocked times
+                            )
+                        ).exists()
+
+                        status = 'unscheduled' if blocked else 'scheduled'
+
                         Service.objects.create(
                             resident=self.resident,
                             service_type=self.service_type,
-                            status='scheduled',  # Change this from 'unscheduled' to 'scheduled'
+                            status=status,
                             due_date=current_date,
-                            scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
-                            end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
+                            scheduled_time=scheduled_time,
+                            end_time=end_time,
                             frequency_id=self.id,
-                            caregiver=self.caregiver  # Add this line
+                            caregiver=self.caregiver
                         )
                         occurrences += 1
-                        logger.info(f"Created service for {current_date}")
+                        logger.info(f"Created service for {current_date} with status: {status}")
                     except Exception as e:
                         logger.error(f"Error creating service for {current_date}: {str(e)}")
 
@@ -340,7 +358,7 @@ class ResidentServiceFrequency(models.Model):
                 break
 
         logger.info(f"Finished creating services. Total occurrences: {occurrences}")
-
+        
     def should_create_service(self, date):
         if self.recurrence_pattern == 'daily':
             return (date - self.start_date).days % self.frequency == 0
@@ -357,7 +375,7 @@ class ResidentServiceFrequency(models.Model):
         Service.objects.filter(
             resident=self.resident,
             service_type=self.service_type,
-            status__in=['scheduled'],
+            status__in=['scheduled', 'unscheduled'],
             frequency_id=self.id
         ).delete()
         super().delete(*args, **kwargs)

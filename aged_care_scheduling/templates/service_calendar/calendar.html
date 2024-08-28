@@ -152,40 +152,6 @@
 .fc-list-event-dot {
     display: none !important;
 }
-.fc-timegrid-axis-cushion {
-    max-width: 60px;
-}
-
-.fc-timegrid-slot-label-cushion {
-    max-width: 60px;
-}
-
-.fc-event-blocked {
-    margin-top: 0 !important;
-    border: none !important;
-    background-color: #ffcdd2 !important;
-    color: #c62828 !important;
-}
-
-.fc-timegrid-event-harness {
-    top: 0 !important;
-}
-
-.fc-v-event {
-    border: none;
-    background-color: transparent;
-}
-
-.fc-timegrid-event {
-    box-shadow: none !important;
-}
-
-.fc-timegrid-more-link {
-    top: 0 !important;
-    background-color: rgba(255, 205, 210, 0.8) !important;
-    border: none !important;
-    color: #c62828 !important;
-}
 </style>
 
 <div class="calendar-container fade-in">
@@ -264,28 +230,32 @@ $(document).ready(function() {
                 listMonth: { buttonText: 'List' }
             },
             eventContent: function(arg) {
-            if (arg.event.extendedProps.type === 'blocked') {
-                return {
-                    html: '<div class="fc-event-main">' + arg.event.title + '</div>'
-                };
-            } else {
-                var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                var timeString = startTime + ' - ' + endTime;
-                var residentName = arg.event.extendedProps.resident;
-                var serviceType = arg.event.extendedProps.serviceType;
-                
-                if (arg.view.type === 'dayGridMonth') {
+                if (arg.event.extendedProps.type === 'blocked') {
                     return {
-                        html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + '<br>' + residentName + '<br>' + serviceType + '</div>'
+                        html: '<div class="fc-event-main">' + arg.event.title + '</div>'
                     };
                 } else {
-                    return {
-                        html: '<div class="fc-event-rectangle"></div><div class="fc-event-title">' + timeString + ' ' + residentName + '<br>' + serviceType + '</div>'
-                    };
+                    var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    var timeString = startTime + ' - ' + endTime;
+                    var residentName = arg.event.extendedProps.resident;
+                    var serviceType = arg.event.extendedProps.serviceType;
+                    
+                    if (arg.view.type === 'dayGridMonth') {
+                        return {
+                            html: '<div class="fc-event-rectangle"></div>' +
+                                '<div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>' +
+                                '<div class="fc-event-service-type">' + serviceType + '</div>'
+                        };
+                    } else {
+                        return {
+                            html: '<div class="fc-event-rectangle"></div>' +
+                                '<div class="fc-event-title">' + timeString + ' ' + residentName + '</div>' +
+                                '<div class="fc-event-service-type">' + serviceType + '</div>'
+                        };
+                    }
                 }
-            }
-        },
+            },
             eventClassNames: function(arg) {
                 if (arg.event.extendedProps.type === 'blocked') {
                     return ['fc-event-blocked'];
@@ -421,8 +391,49 @@ $(document).ready(function() {
 
         $('#apply-filter').on('click', function() {
             $(this).html('<i class="fas fa-spinner fa-spin"></i> Applying...').prop('disabled', true);
-            calendar.refetchEvents().then(function() {
-                $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
+            
+            // Use the events function directly instead of refetchEvents
+            calendar.removeAllEvents();
+            calendar.addEventSource(function(info, successCallback, failureCallback) {
+                var caregivers = $('#caregiver-select').val() || [];
+                var residents = $('#resident-select').val() || [];
+                var careHomes = $('#care-home-select').val() || [];
+                var serviceTypes = $('#service-type-select').val() || [];
+
+                $.ajax({
+                    url: '{% url "get_events" %}',
+                    data: {
+                        start: info.startStr,
+                        end: info.endStr,
+                        caregivers: caregivers.join(','),
+                        residents: residents.join(','),
+                        care_homes: careHomes.join(','),
+                        service_types: serviceTypes.join(','),
+                    },
+                    success: function(data) {
+                        var events = data.map(function(event) {
+                            return {
+                                id: event.id,
+                                title: event.type === 'blocked' ? event.title : event.resident,
+                                start: event.start,
+                                end: event.end,
+                                allDay: false,
+                                extendedProps: {
+                                    type: event.type,
+                                    resident: event.resident,
+                                    serviceType: event.serviceType
+                                }
+                            };
+                        });
+                        successCallback(events);
+                        $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error('Failed to fetch events:', textStatus, errorThrown);
+                        failureCallback();
+                        $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
+                    }
+                });
             });
         });
     } else {

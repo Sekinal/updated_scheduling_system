@@ -65,6 +65,11 @@ def get_events(request):
         Q(start_date__range=[start.date(), end.date()]) | Q(end_date__range=[start.date(), end.date()])
     )
 
+    if caregivers and caregivers[0]:
+        blocked_times = blocked_times.filter(Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True))
+    if care_homes and care_homes[0]:
+        blocked_times = blocked_times.filter(Q(locations__id__in=care_homes) | Q(locations__isnull=True))
+
     for blocked in blocked_times:
         events.append({
             'id': f"blocked_{blocked.id}",
