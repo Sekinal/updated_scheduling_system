@@ -66,21 +66,15 @@ def get_events(request):
     )
 
     for blocked in blocked_times:
-        current_start = timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time))
-        current_end = timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time))
-        while current_start < current_end:
-            day_end = min(current_end, current_start + timezone.timedelta(days=1))
-            events.append({
-                'id': f"blocked_{blocked.id}",
-                'title': f"Blocked: {blocked.reason}",
-                'start': current_start.isoformat(),
-                'end': day_end.isoformat(),
-                'type': 'blocked',
-                'startDate': blocked.start_date.isoformat(),
-                'startTime': blocked.start_time.isoformat(),
-                'endDate': blocked.end_date.isoformat(),
-                'endTime': blocked.end_time.isoformat(),
-            })
-            current_start = day_end
+        events.append({
+            'id': f"blocked_{blocked.id}",
+            'title': f"Blocked: {blocked.reason}",
+            'start': timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time)).isoformat(),
+            'end': timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time)).isoformat(),
+            'type': 'blocked',
+            'allDay': True,
+            'display': 'background',
+            'color': '#ffcdd2',
+        })
 
     return JsonResponse(events, safe=False)

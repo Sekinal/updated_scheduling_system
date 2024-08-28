@@ -25,8 +25,11 @@ SECRET_KEY = 'django-insecure-s*xxr#q!%i(*&j0)-uyf3hdkemu08(xfj0gx&yzf(_svfqwp4e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['thermostatic.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['thermostatic.pythonanywhere.com', '127.0.0.1', 'localhost', '.ngrok-free.app']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://db15-2806-10a6-9-a297-c9f6-cd4a-355b-852d.ngrok-free.app',
+]
 
 # Application definition
 

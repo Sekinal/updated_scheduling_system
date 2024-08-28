@@ -33,6 +33,12 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
         required=False
     )
     
+    caregiver = forms.ModelChoiceField(
+        queryset=User.objects.filter(userprofile__role='staff'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+        
     RECURRENCE_END_CHOICES = [
         ('never', 'Never'),
         ('after', 'After'),
@@ -46,7 +52,7 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
 
     class Meta:
         model = ResidentServiceFrequency
-        fields = ['resident', 'service_type', 'recurrence_pattern', 'frequency', 'preferred_days', 'start_time', 'end_time', 'start_date', 'recurrence_end', 'occurrences', 'end_date']
+        fields = ['resident', 'service_type', 'recurrence_pattern', 'frequency', 'preferred_days', 'start_time', 'end_time', 'start_date', 'recurrence_end', 'occurrences', 'end_date', 'caregiver']
         widgets = {
             'start_time': forms.TimeInput(attrs={'type': 'time', 'id': 'id_start_time'}),
             'end_time': forms.TimeInput(attrs={'type': 'time', 'id': 'id_end_time'}),
@@ -65,7 +71,7 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
             self.fields['resident'].widget.attrs['style'] = 'pointer-events: none;'
         
         self.fields['preferred_days'].required = False  # Set the field as not required
-
+        self.fields['caregiver'].queryset = User.objects.filter(userprofile__role='staff')
         # If recurrence pattern is already set to daily or monthly, hide the preferred days field
         if self.instance.recurrence_pattern in ['daily', 'monthly']:
             self.fields['preferred_days'].widget = forms.HiddenInput()

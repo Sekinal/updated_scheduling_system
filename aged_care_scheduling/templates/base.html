@@ -95,6 +95,9 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="fas fa-key"></i> Change Password</a></li>
+                            {% if user.is_staff %}
+                            <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-lock"></i> Admin Panel</a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="post" action="{% url 'accounts:logout' %}">

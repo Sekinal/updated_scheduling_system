@@ -70,10 +70,23 @@ class Service(models.Model):
     frequency_id = models.UUIDField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        if self.scheduled_time and self.status == 'unscheduled':
-            self.status = 'scheduled'
+        if self.scheduled_time:
+            # Check if the service time falls within any blocked time
+            blocked = BlockedTime.objects.filter(
+                start_date__lte=self.scheduled_time.date(),
+                end_date__gte=self.scheduled_time.date(),
+                start_time__lte=self.scheduled_time.time(),
+                end_time__gte=self.scheduled_time.time()
+            ).exists()
+
+            if blocked:
+                self.status = 'unscheduled'
+            else:
+                self.status = 'scheduled'
+
         if self.scheduled_time and not self.end_time:
             self.end_time = self.scheduled_time + self.service_type.duration
+
         self.check_conflicts()
         super().save(*args, **kwargs)
 
@@ -88,16 +101,9 @@ class Service(models.Model):
             status='scheduled'
         ).exclude(pk=self.pk)
 
-        blocked_times = BlockedTime.objects.filter(
-            Q(start_time__lt=self.end_time, end_time__gt=self.scheduled_time) |
-            Q(start_time__lte=self.scheduled_time, end_time__gte=self.end_time)
-        )
-
         if conflicts.exists():
             raise ValidationError("This service conflicts with an existing service for the resident or caregiver.")
-        
-        if blocked_times.exists():
-            raise ValidationError("This service is scheduled during a blocked time period.")
+
 
     def mark_as_completed(self, reason='completed'):
         self.status = 'completed'
@@ -251,6 +257,7 @@ class ResidentServiceFrequency(models.Model):
         ('on_date', 'On Date'),
     ]
 
+    caregiver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='service_frequencies')
     resident = models.ForeignKey('residents.Resident', on_delete=models.CASCADE, related_name='service_frequencies')
     service_type = models.ForeignKey('ServiceType', on_delete=models.CASCADE)
     recurrence_pattern = models.CharField(max_length=10, choices=RECURRENCE_CHOICES, null=True)
@@ -307,11 +314,12 @@ class ResidentServiceFrequency(models.Model):
                         Service.objects.create(
                             resident=self.resident,
                             service_type=self.service_type,
-                            status='unscheduled',
+                            status='scheduled',  # Change this from 'unscheduled' to 'scheduled'
                             due_date=current_date,
                             scheduled_time=timezone.make_aware(datetime.combine(current_date, self.start_time)),
                             end_time=timezone.make_aware(datetime.combine(current_date, self.end_time)),
-                            frequency_id=self.id
+                            frequency_id=self.id,
+                            caregiver=self.caregiver  # Add this line
                         )
                         occurrences += 1
                         logger.info(f"Created service for {current_date}")
