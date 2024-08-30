@@ -335,24 +335,130 @@
 {% block extra_js %}
 {{ block.super }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
-        const occurrencesInput = document.getElementById('id_occurrences');
-        const endDateInput = document.getElementById('id_end_date');
+document.addEventListener('DOMContentLoaded', function() {
+    const radioButtons = document.querySelectorAll('input[name="recurrence_end"]');
+    const occurrencesInput = document.getElementById('id_occurrences');
+    const endDateInput = document.getElementById('id_end_date');
+    const serviceTypeSelect = document.getElementById('id_service_type');
+    const startTimeInput = document.getElementById('id_start_time');
+    const endTimeInput = document.getElementById('id_end_time');
+    const recurrencePatternSelect = document.getElementById('id_recurrence_pattern');
+    const preferredDaysField = document.getElementById('id_preferred_days');
+    const preferredDaysLabel = preferredDaysField.previousElementSibling;
+    const frequencyLabel = document.querySelector('label[for="id_frequency"]');
+    const frequencyInput = document.getElementById('id_frequency');
+    const monthlyDatesField = document.getElementById('monthlyDatesField');
 
-        function updateVisibility() {
-            const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
-            occurrencesInput.style.display = selectedValue === 'after'? 'block' : 'none';
-            endDateInput.style.display = selectedValue === 'on_date'? 'block' : 'none';
+    function updateVisibility() {
+        const selectedValue = document.querySelector('input[name="recurrence_end"]:checked').value;
+        occurrencesInput.style.display = selectedValue === 'after' ? 'block' : 'none';
+        endDateInput.style.display = selectedValue === 'on_date' ? 'block' : 'none';
+    }
+
+    function updateEndTime() {
+        const serviceTypeId = serviceTypeSelect.value;
+        const startTime = startTimeInput.value;
+
+        if (serviceTypeId && startTime) {
+            fetch(`/api/service-type/${serviceTypeId}/duration/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const duration = data.duration;
+                    const [hours, minutes] = startTime.split(':');
+                    const startDate = new Date(2000, 0, 1, hours, minutes);
+                    const endDate = new Date(startDate.getTime() + duration * 60000);
+                    const endTime = endDate.toTimeString().slice(0, 5);
+                    endTimeInput.value = endTime;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    }
+
+    function updatePreferredDaysVisibility() {
+        const selectedValue = recurrencePatternSelect.value;
+        const display = (selectedValue === 'daily' || selectedValue === 'monthly' || selectedValue === 'yearly') ? 'none' : 'block';
+        preferredDaysField.style.display = display;
+        preferredDaysLabel.style.display = display;
+    }
+
+    function updateFrequencyLabel() {
+        const selectedValue = recurrencePatternSelect.value;
+        frequencyLabel.innerText = 'Recur every';
+        frequencyInput.type = 'number';
+        frequencyInput.min = '1';
+        let pluralize = frequencyInput.nextElementSibling;
+        if (!pluralize) {
+            pluralize = document.createElement('span');
+            pluralize.style.marginLeft = '5px';
+            frequencyInput.parentNode.appendChild(pluralize);
+        }
+        pluralize.innerText = ` ${selectedValue.slice(0, -2)}(s)`;
+    }
+
+    function updateFieldVisibility() {
+        const selectedValue = recurrencePatternSelect.value;
+        if (monthlyDatesField) {
+            monthlyDatesField.style.display = selectedValue === 'monthly' ? 'block' : 'none';
+        }
+        updatePreferredDaysVisibility();
+    }
+
+    // Event listeners
+    radioButtons.forEach(radio => radio.addEventListener('change', updateVisibility));
+    serviceTypeSelect.addEventListener('change', updateEndTime);
+    startTimeInput.addEventListener('input', updateEndTime);
+    recurrencePatternSelect.addEventListener('change', updatePreferredDaysVisibility);
+    recurrencePatternSelect.addEventListener('change', updateFrequencyLabel);
+    recurrencePatternSelect.addEventListener('change', updateFieldVisibility);
+
+    // Initial calls
+    updateVisibility();
+    updateEndTime();
+    updatePreferredDaysVisibility();
+    updateFrequencyLabel();
+    updateFieldVisibility();
+
+    // Modal reset functionality
+    const modal = document.getElementById('addServiceFrequencyModal');
+    const form = document.getElementById('serviceFrequencyForm');
+
+    modal.addEventListener('hidden.bs.modal', function () {
+        // Reset the form
+        form.reset();
+
+        // Reset recurrence end options visibility
+        occurrencesInput.style.display = 'none';
+        endDateInput.style.display = 'none';
+
+        // Reset preferred days visibility
+        preferredDaysField.style.display = 'block';
+        preferredDaysLabel.style.display = 'block';
+
+        // Reset frequency label
+        frequencyLabel.innerText = 'Frequency';
+        if (frequencyInput.nextElementSibling) {
+            frequencyInput.parentNode.removeChild(frequencyInput.nextElementSibling);
         }
 
-        radioButtons.forEach(radio => {
-            radio.addEventListener('change', updateVisibility);
-        });
+        // Reset monthly dates field visibility
+        if (monthlyDatesField) {
+            monthlyDatesField.style.display = 'none';
+        }
 
-        // Initial visibility update
-        updateVisibility();
+        // Reset service type and times
+        serviceTypeSelect.selectedIndex = 0;
+        startTimeInput.value = '';
+        endTimeInput.value = '';
+
+        // Trigger change event on recurrence pattern select to reset dependent fields
+        recurrencePatternSelect.dispatchEvent(new Event('change'));
     });
+});
     const serviceTypeSelect = document.getElementById('id_service_type');
     const startTimeInput = document.getElementById('id_start_time');
     const endTimeInput = document.getElementById('id_end_time');
