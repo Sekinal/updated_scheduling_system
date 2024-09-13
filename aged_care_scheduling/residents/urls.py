@@ -1,3 +1,4 @@
+# residents/urls.py
 from django.urls import path
 from .views import ResidentListView, ResidentDetailView, ResidentCreateView, ResidentUpdateView, ResidentDeleteView, ResidentDashboardView, ResidentServiceListView, DeleteAllServicesView, ServiceFrequencyUpdateView, ServiceFrequencyDeleteView
 
