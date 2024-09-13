@@ -1,3 +1,5 @@
+# homes/views.py
+
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -55,15 +57,23 @@ class CareHomeDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         residents = self.object.residents.all()
         search_query = self.request.GET.get('search')
+        status_filter = self.request.GET.get('status', 'active')  # Default to active residents
+
         if search_query:
             residents = residents.filter(Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query))
-        
+
+        if status_filter == 'active':
+            residents = residents.filter(is_active=True)
+        elif status_filter == 'inactive':
+            residents = residents.filter(is_active=False)
+
         paginator = Paginator(residents, 10)  # Show 10 residents per page
         page_number = self.request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context['residents'] = page_obj
         context['search_query'] = search_query
+        context['status_filter'] = status_filter
         return context
 
 class CareHomeCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):

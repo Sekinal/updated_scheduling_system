@@ -9,6 +9,11 @@
     <form method="get" class="mb-3">
         <div class="input-group">
             <input type="text" name="search" class="form-control" placeholder="Search residents..." value="{{ search_query }}">
+            <select name="status" class="form-control">
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+            </select>
             <div class="input-group-append">
                 <button class="btn btn-outline-secondary" type="submit">
                     <i class="fas fa-search"></i>
@@ -25,6 +30,7 @@
                     <th>Date of Birth</th>
                     <th>Admission Date</th>
                     <th>Care Home</th>
+                    <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -35,11 +41,17 @@
                         <td>{{ resident.date_of_birth }}</td>
                         <td>{{ resident.admission_date }}</td>
                         <td><a href="{% url 'care_homes:home_detail' resident.care_home.pk %}">{{ resident.care_home.name }}</a></td>
+                        <td>{% if resident.is_active %}Active{% else %}Inactive{% endif %}</td>
                         <td>
                             <a href="{% url 'residents:resident_dashboard' resident.pk %}" class="btn btn-sm btn-info">Dashboard</a>
                             <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-sm btn-primary">Edit</a>
                             <a href="{% url 'residents:resident_delete' resident.pk %}" class="btn btn-sm btn-danger">Delete</a>
                             <a href="{% url 'residents:resident_service_list' resident.pk %}" class="btn btn-sm btn-success">Services</a>
+                            {% if resident.is_active %}
+                                <a href="{% url 'residents:resident_deactivate' resident.pk %}" class="btn btn-sm btn-warning">Deactivate</a>
+                            {% else %}
+                                <a href="{% url 'residents:resident_activate' resident.pk %}" class="btn btn-sm btn-warning">Activate</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -50,19 +62,27 @@
             <nav>
                 <ul class="pagination">
                     {% if residents.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page={{ residents.previous_page_number }}&search={{ search_query }}">Previous</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ residents.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}">Previous</a>
+                        </li>
                     {% endif %}
 
                     {% for i in residents.paginator.page_range %}
                         {% if residents.number == i %}
-                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                            <li class="page-item active">
+                                <span class="page-link">{{ i }} <span class="sr-only">(current)</span></span>
+                            </li>
                         {% else %}
-                            <li class="page-item"><a class="page-link" href="?page={{ i }}&search={{ search_query }}">{{ i }}</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}&search={{ search_query }}&status={{ status_filter }}">{{ i }}</a>
+                            </li>
                         {% endif %}
                     {% endfor %}
 
                     {% if residents.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ residents.next_page_number }}&search={{ search_query }}">Next</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ residents.next_page_number }}&search={{ search_query }}&status={{ status_filter }}">Next</a>
+                        </li>
                     {% endif %}
                 </ul>
             </nav>
