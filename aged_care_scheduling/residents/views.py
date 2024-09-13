@@ -136,6 +136,8 @@ class ResidentDashboardView(DetailView):
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
 
+# residents/views.py
+
 class ResidentListView(ListView):
     model = Resident
     template_name = 'resident/resident_list.html'
@@ -145,6 +147,8 @@ class ResidentListView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         search_query = self.request.GET.get('search', '')
+        status_filter = self.request.GET.get('status', 'active')
+
         if search_query:
             queryset = queryset.filter(
                 Q(first_name__icontains=search_query) |
@@ -153,11 +157,18 @@ class ResidentListView(ListView):
                 Q(admission_date__icontains=search_query) |
                 Q(care_home__name__icontains=search_query)
             )
+
+        if status_filter == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status_filter == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
         return queryset.order_by('last_name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
+        context['status_filter'] = self.request.GET.get('status', 'active')
         return context
 
 class ResidentServiceListView(LoginRequiredMixin, ListView):
@@ -226,3 +237,17 @@ class ServiceFrequencyDeleteView(DeleteView):
 
         messages.success(self.request, 'Service frequency and all related scheduled services have been deleted.')
         return redirect(success_url)
+    
+class ResidentDeactivateView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        resident = get_object_or_404(Resident, pk=pk)
+        resident.deactivate()
+        messages.success(request, f"{resident.first_name} {resident.last_name} has been deactivated.")
+        return redirect('residents:resident_list')
+
+class ResidentActivateView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        resident = get_object_or_404(Resident, pk=pk)
+        resident.activate()
+        messages.success(request, f"{resident.first_name} {resident.last_name} has been activated.")
+        return redirect('residents:resident_list')
