@@ -217,6 +217,8 @@ $(document).ready(function() {
         theme: "classic"
     });
     
+    var filterApplied = false;
+
     var calendarEl = document.getElementById('calendar');
     if (calendarEl) {
         var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -369,22 +371,26 @@ $(document).ready(function() {
                         residents: residents.join(','),
                         care_homes: careHomes.join(','),
                         service_types: serviceTypes.join(','),
+                        filter_applied: filterApplied  // Add this parameter
                     },
                     success: function(data) {
                         var events = data.map(function(event) {
-                            return {
-                                id: event.id,
-                                title: event.type === 'blocked' ? event.title : event.resident,
-                                start: event.start,
-                                end: event.end,
-                                allDay: false,
-                                extendedProps: {
-                                    type: event.type,
-                                    resident: event.resident,
-                                    serviceType: event.serviceType
-                                }
-                            };
-                        });
+                            // Only include blocked events if a filter has been applied
+                            if (event.type !== 'blocked' || filterApplied) {
+                                return {
+                                    id: event.id,
+                                    title: event.type === 'blocked' ? event.title : event.resident,
+                                    start: event.start,
+                                    end: event.end,
+                                    allDay: false,
+                                    extendedProps: {
+                                        type: event.type,
+                                        resident: event.resident,
+                                        serviceType: event.serviceType
+                                    }
+                                };
+                            }
+                        }).filter(Boolean);  // Remove undefined entries
                         successCallback(events);
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
@@ -400,8 +406,11 @@ $(document).ready(function() {
         $('#apply-filter').on('click', function() {
             $(this).html('<i class="fas fa-spinner fa-spin"></i> Applying...').prop('disabled', true);
             
+            filterApplied = true;  // Set the flag when a filter is applied
+
             // Use the events function directly instead of refetchEvents
             calendar.removeAllEvents();
+            calendar.refetchEvents();  // This will trigger the events function with the new filterApplied value
             calendar.addEventSource(function(info, successCallback, failureCallback) {
                 var caregivers = $('#caregiver-select').val() || [];
                 var residents = $('#resident-select').val() || [];

@@ -38,6 +38,8 @@ def get_events(request):
     care_homes = request.GET.get('care_homes', '').split(',')
     service_types = request.GET.get('service_types', '').split(',')
 
+    filter_applied = request.GET.get('filter_applied') == 'true'
+
     services = Service.objects.filter(
         scheduled_time__range=[start, end],
         status='scheduled'
@@ -62,25 +64,26 @@ def get_events(request):
         'type': 'service'
     } for service in services]
     
-    blocked_times = BlockedTime.objects.filter(
-        Q(start_date__range=[start.date(), end.date()]) | Q(end_date__range=[start.date(), end.date()])
-    )
+    if filter_applied:
+        blocked_times = BlockedTime.objects.filter(
+            Q(start_date__range=[start.date(), end.date()]) | Q(end_date__range=[start.date(), end.date()])
+        )
 
-    if caregivers and caregivers[0]:
-        blocked_times = blocked_times.filter(Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True))
-    if care_homes and care_homes[0]:
-        blocked_times = blocked_times.filter(Q(locations__id__in=care_homes) | Q(locations__isnull=True))
+        if caregivers and caregivers[0]:
+            blocked_times = blocked_times.filter(Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True))
+        if care_homes and care_homes[0]:
+            blocked_times = blocked_times.filter(Q(locations__id__in=care_homes) | Q(locations__isnull=True))
 
-    for blocked in blocked_times:
-        events.append({
-            'id': f"blocked_{blocked.id}",
-            'title': f"Blocked: {blocked.reason}",
-            'start': timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time)).isoformat(),
-            'end': timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time)).isoformat(),
-            'type': 'blocked',
-            'allDay': True,
-            'display': 'background',
-            'color': '#ffcdd2',
-        })
+        for blocked in blocked_times:
+            events.append({
+                'id': f"blocked_{blocked.id}",
+                'title': f"Blocked: {blocked.reason}",
+                'start': timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time)).isoformat(),
+                'end': timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time)).isoformat(),
+                'type': 'blocked',
+                'allDay': True,
+                'display': 'background',
+                'color': '#ffcdd2',
+            })
 
     return JsonResponse(events, safe=False)
