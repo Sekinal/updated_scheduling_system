@@ -1,3 +1,4 @@
+# service_calendar/views.py
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -87,3 +88,30 @@ def get_events(request):
             })
 
     return JsonResponse(events, safe=False)
+
+@login_required
+def get_unscheduled_services(request):
+    caregivers = request.GET.get('caregivers', '').split(',')
+    residents = request.GET.get('residents', '').split(',')
+    care_homes = request.GET.get('care_homes', '').split(',')
+    service_types = request.GET.get('service_types', '').split(',')
+
+    services = Service.objects.filter(status='unscheduled')
+
+    if caregivers and caregivers[0]:
+        services = services.filter(caregiver__id__in=caregivers)
+    if residents and residents[0]:
+        services = services.filter(resident__id__in=residents)
+    if care_homes and care_homes[0]:
+        services = services.filter(resident__care_home__id__in=care_homes)
+    if service_types and service_types[0]:
+        services = services.filter(service_type__id__in=service_types)
+
+    data = [{
+        'id': service.id,
+        'service_type': service.service_type.name,
+        'resident': f"{service.resident.first_name} {service.resident.last_name}",
+        'due_date': service.due_date.strftime('%Y-%m-%d') if service.due_date else 'Not set'
+    } for service in services]
+
+    return JsonResponse(data, safe=False)

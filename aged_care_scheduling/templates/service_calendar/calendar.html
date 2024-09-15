@@ -197,6 +197,17 @@
             <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
         </div>
     </div>
+    <div class="dropdown mb-3">
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="unscheduledDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-tasks"></i> Unscheduled Services
+            <span class="badge bg-light text-dark ms-1" id="unscheduledCount">0</span>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="unscheduledDropdown" id="unscheduledList">
+            <li><h6 class="dropdown-header">Unscheduled Services</h6></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" id="noUnscheduled">No unscheduled services</a></li>
+        </ul>
+    </div>
     <div id="calendar"></div>
 </div>
 {% endblock %}
@@ -402,6 +413,7 @@ $(document).ready(function() {
             dayMaxEvents: 2,
         });
         calendar.render();
+        updateUnscheduledServices();
 
         $('#apply-filter').on('click', function() {
             $(this).html('<i class="fas fa-spinner fa-spin"></i> Applying...').prop('disabled', true);
@@ -411,6 +423,9 @@ $(document).ready(function() {
             // Use the events function directly instead of refetchEvents
             calendar.removeAllEvents();
             calendar.refetchEvents();  // This will trigger the events function with the new filterApplied value
+            
+            updateUnscheduledServices();  // Add this line
+
             calendar.addEventSource(function(info, successCallback, failureCallback) {
                 var caregivers = $('#caregiver-select').val() || [];
                 var residents = $('#resident-select').val() || [];
@@ -457,6 +472,44 @@ $(document).ready(function() {
         console.error('Calendar element not found');
     }
 });
+
+function updateUnscheduledServices() {
+    var caregivers = $('#caregiver-select').val() || [];
+    var residents = $('#resident-select').val() || [];
+    var careHomes = $('#care-home-select').val() || [];
+    var serviceTypes = $('#service-type-select').val() || [];
+
+    $.ajax({
+        url: '{% url "get_unscheduled_services" %}',
+        data: {
+            caregivers: caregivers.join(','),
+            residents: residents.join(','),
+            care_homes: careHomes.join(','),
+            service_types: serviceTypes.join(','),
+        },
+        success: function(data) {
+            var $list = $('#unscheduledList');
+            $list.html('<li><h6 class="dropdown-header">Unscheduled Services</h6></li><li><hr class="dropdown-divider"></li>');
+            
+            if (data.length === 0) {
+                $list.append('<li><a class="dropdown-item" href="#" id="noUnscheduled">No unscheduled services</a></li>');
+            } else {
+                data.forEach(function(service) {
+                    $list.append(
+                        '<li><a class="dropdown-item" href="/services/' + service.id + '/update/">' +
+                        service.service_type + ' for ' + service.resident +
+                        ' (Due: ' + service.due_date + ')</a></li>'
+                    );
+                });
+            }
+            
+            $('#unscheduledCount').text(data.length);
+        },
+        error: function() {
+            console.error('Failed to fetch unscheduled services');
+        }
+    });
+}
 
 function updateEvent(event) {
     $.ajax({
