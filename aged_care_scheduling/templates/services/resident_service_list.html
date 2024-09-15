@@ -66,6 +66,16 @@
     <button class="btn btn-secondary me-2" id="toggle-view">
       <i class="fas fa-th-large" id="view-icon"></i> Toggle View
     </button>
+    </div>
+    <select class="form-select me-2" id="filter-status">
+      <option value="">Filter by Status</option>
+      <option value="scheduled">Scheduled</option>
+      <option value="completed">Completed</option>
+      <option value="unscheduled">Unscheduled</option>
+      <option value="not_completed">Not Completed</option>
+      <option value="refused">Refused</option>
+      <option value="missed">Missed</option>
+    </select>
     <select class="form-select me-2" id="filter-service-type">
       <option value="">Filter by Service Type</option>
       {% for service_type in service_types %}
@@ -92,7 +102,8 @@
       <div class="service-card h-100" 
       data-service-type="{{ service.service_type.id }}"
       data-caregiver="{{ service.caregiver.id|default:'' }}"
-      data-month="{{ service.due_date|date:'F' }}">
+      data-month="{{ service.due_date|date:'F' }}"
+      data-status="{{ service.status }}">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">{{ service.service_type }}</h5>
             <span class="status-icon">
@@ -192,43 +203,47 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const containerView = document.getElementById('services-container');
-  const toggleViewButton = document.getElementById('toggle-view');
-  const viewIcon = document.getElementById('view-icon');
-  const filterServiceType = document.getElementById('filter-service-type');
-  const filterMonth = document.getElementById('filter-month');
-  const filterCaregiver = document.getElementById('filter-caregiver');
-
-  toggleViewButton.addEventListener('click', () => {
-    containerView.classList.toggle('grid-view');
-    containerView.classList.toggle('list-view');
-    viewIcon.classList.toggle('fa-th-large');
-    viewIcon.classList.toggle('fa-th-list');
-  });
-
-  function applyFilters() {
-    const serviceTypeId = filterServiceType.value;
-    const month = filterMonth.value;
-    const caregiverId = filterCaregiver.value;
-
-    const services = document.querySelectorAll('.service-card');
-    services.forEach((service) => {
-      const matchesServiceType = serviceTypeId === '' || service.dataset.serviceType === serviceTypeId;
-      const matchesMonth = month === '' || service.dataset.month === month;
-      const matchesCaregiver = caregiverId === '' || service.dataset.caregiver === caregiverId;
-
-      if (matchesServiceType && matchesMonth && matchesCaregiver) {
-        service.style.display = '';
-      } else {
-        service.style.display = 'none';
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    const containerView = document.getElementById('services-container');
+    const toggleViewButton = document.getElementById('toggle-view');
+    const viewIcon = document.getElementById('view-icon');
+    const filterServiceType = document.getElementById('filter-service-type');
+    const filterMonth = document.getElementById('filter-month');
+    const filterCaregiver = document.getElementById('filter-caregiver');
+    const filterStatus = document.getElementById('filter-status');  // New filter
+  
+    toggleViewButton.addEventListener('click', () => {
+      containerView.classList.toggle('grid-view');
+      containerView.classList.toggle('list-view');
+      viewIcon.classList.toggle('fa-th-large');
+      viewIcon.classList.toggle('fa-th-list');
     });
-  }
-
-  filterServiceType.addEventListener('change', applyFilters);
-  filterMonth.addEventListener('change', applyFilters);
-  filterCaregiver.addEventListener('change', applyFilters);
-});
-</script>
+  
+    function applyFilters() {
+      const serviceTypeId = filterServiceType.value;
+      const month = filterMonth.value;
+      const caregiverId = filterCaregiver.value;
+      const status = filterStatus.value;  // New filter value
+  
+      const services = document.querySelectorAll('.service-card');
+      services.forEach((service) => {
+        const matchesServiceType = serviceTypeId === '' || service.dataset.serviceType === serviceTypeId;
+        const matchesMonth = month === '' || service.dataset.month === month;
+        const matchesCaregiver = caregiverId === '' || service.dataset.caregiver === caregiverId;
+        const matchesStatus = status === '' || service.dataset.status === status;  // New condition
+  
+        if (matchesServiceType && matchesMonth && matchesCaregiver && matchesStatus) {
+          service.style.display = '';
+        } else {
+          service.style.display = 'none';
+        }
+      });
+    }
+  
+    filterServiceType.addEventListener('change', applyFilters);
+    filterMonth.addEventListener('change', applyFilters);
+    filterCaregiver.addEventListener('change', applyFilters);
+    filterStatus.addEventListener('change', applyFilters);  // New event listener
+  });
+  </script>
 {% endblock %}
