@@ -14,6 +14,8 @@
         box-shadow: 0 0 20px rgba(0,0,0,0.1);
         padding: 30px;
         margin-top: 30px;
+        display: flex;
+        gap: 20px;
     }
     .fc {
         background-color: #fff;
@@ -116,99 +118,138 @@
         animation: fadeIn 0.5s ease-in;
     }
     .fc-event.fc-event-blocked {
-    background-color: #ffebee !important;
-    border: 1px solid #ffcdd2 !important;
-}
-
-.fc-event.fc-event-blocked .fc-event-main {
-    color: #c62828;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-}
-
-.fc-event.fc-event-blocked .fc-event-main:before {
-    content: '\f05e';
-    font-family: 'Font Awesome 5 Free';
-    margin-right: 5px;
-    font-weight: 900;
-}
-
-.fc-daygrid-event.fc-event-blocked {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fc-list-event.fc-event-blocked td {
-    background-color: #ffebee !important;
-}
-
-.fc-list-event.fc-event-blocked .fc-list-event-dot {
-    border-color: #c62828 !important;
-}
-
-.fc-list-event-dot {
-    display: none !important;
-}
+        background-color: #ffebee !important;
+        border: 1px solid #ffcdd2 !important;
+    }
+    .fc-event.fc-event-blocked .fc-event-main {
+        color: #c62828;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    .fc-event.fc-event-blocked .fc-event-main:before {
+        content: '\f05e';
+        font-family: 'Font Awesome 5 Free';
+        margin-right: 5px;
+        font-weight: 900;
+    }
+    .fc-daygrid-event.fc-event-blocked {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .fc-list-event.fc-event-blocked td {
+        background-color: #ffebee !important;
+    }
+    .fc-list-event.fc-event-blocked .fc-list-event-dot {
+        border-color: #c62828 !important;
+    }
+    .fc-list-event-dot {
+        display: none !important;
+    }
+    .sidebar {
+        width: 300px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    .sidebar.hidden {
+        transform: translateX(-100%);
+    }
+    .main-content {
+        flex-grow: 1;
+    }
+    #toggleSidebar {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        z-index: 1000;
+    }
+    .unscheduled-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .unscheduled-item {
+        background-color: #ffffff;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .unscheduled-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .unscheduled-item a {
+        color: #333;
+        text-decoration: none;
+    }
+    .unscheduled-item .badge {
+        float: right;
+    }
 </style>
 
 <div class="calendar-container fade-in">
-    <h1 class="text-center mb-4">Service Calendar</h1>
-    <div class="filter-section">
-        <h2 class="filter-title"><i class="fas fa-filter"></i> Filters</h2>
-        <div class="row">
-            <div class="col-md-3 mb-3">
-                <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
-                <select id="caregiver-select" class="form-control" multiple>
-                    {% for caregiver in caregivers %}
-                        <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label for="resident-select"><i class="fas fa-user"></i> Resident:</label>
-                <select id="resident-select" class="form-control" multiple>
-                    {% for resident in residents %}
-                        <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label for="care-home-select"><i class="fas fa-home"></i> Care Home:</label>
-                <select id="care-home-select" class="form-control" multiple>
-                    {% for care_home in care_homes %}
-                        <option value="{{ care_home.id }}">{{ care_home.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label for="service-type-select"><i class="fas fa-clipboard-list"></i> Service Type:</label>
-                <select id="service-type-select" class="form-control" multiple>
-                    {% for service_type in service_types %}
-                        <option value="{{ service_type.id }}">{{ service_type.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="text-center mt-3">
-            <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
+    <button id="toggleSidebar" class="btn btn-secondary">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar" id="sidebar">
+        <h3>Unscheduled Services <span class="badge bg-secondary" id="unscheduledCount">0</span></h3>
+        <div class="unscheduled-list" id="unscheduledList">
+            <!-- Unscheduled items will be populated here -->
         </div>
     </div>
-    <div class="dropdown mb-3">
-        <button class="btn btn-secondary dropdown-toggle" type="button" id="unscheduledDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-tasks"></i> Unscheduled Services
-            <span class="badge bg-light text-dark ms-1" id="unscheduledCount">0</span>
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="unscheduledDropdown" id="unscheduledList">
-            <li><h6 class="dropdown-header">Unscheduled Services</h6></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#" id="noUnscheduled">No unscheduled services</a></li>
-        </ul>
+
+    <div class="main-content">
+        <h1 class="text-center mb-4">Service Calendar</h1>
+        <div class="filter-section">
+            <h2 class="filter-title"><i class="fas fa-filter"></i> Filters</h2>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
+                    <select id="caregiver-select" class="form-control" multiple>
+                        {% for caregiver in caregivers %}
+                            <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="resident-select"><i class="fas fa-user"></i> Resident:</label>
+                    <select id="resident-select" class="form-control" multiple>
+                        {% for resident in residents %}
+                            <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="care-home-select"><i class="fas fa-home"></i> Care Home:</label>
+                    <select id="care-home-select" class="form-control" multiple>
+                        {% for care_home in care_homes %}
+                            <option value="{{ care_home.id }}">{{ care_home.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="service-type-select"><i class="fas fa-clipboard-list"></i> Service Type:</label>
+                    <select id="service-type-select" class="form-control" multiple>
+                        {% for service_type in service_types %}
+                            <option value="{{ service_type.id }}">{{ service_type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
+            </div>
+        </div>
+        <div id="calendar"></div>
     </div>
-    <div id="calendar"></div>
 </div>
 {% endblock %}
 
@@ -228,6 +269,11 @@ $(document).ready(function() {
         theme: "classic"
     });
     
+    $('#toggleSidebar').on('click', function() {
+        $('#sidebar').toggleClass('hidden');
+        $(this).toggleClass('btn-secondary btn-primary');
+    });
+
     var filterApplied = false;
 
     var calendarEl = document.getElementById('calendar');
@@ -489,16 +535,18 @@ function updateUnscheduledServices() {
         },
         success: function(data) {
             var $list = $('#unscheduledList');
-            $list.html('<li><h6 class="dropdown-header">Unscheduled Services</h6></li><li><hr class="dropdown-divider"></li>');
+            $list.empty();
             
             if (data.length === 0) {
-                $list.append('<li><a class="dropdown-item" href="#" id="noUnscheduled">No unscheduled services</a></li>');
+                $list.append('<div class="unscheduled-item">No unscheduled services</div>');
             } else {
                 data.forEach(function(service) {
                     $list.append(
-                        '<li><a class="dropdown-item" href="/services/' + service.id + '/update/">' +
+                        '<div class="unscheduled-item">' +
+                        '<a href="/services/' + service.id + '/update/">' +
                         service.service_type + ' for ' + service.resident +
-                        ' (Due: ' + service.due_date + ')</a></li>'
+                        '<span class="badge bg-warning text-dark">Due: ' + service.due_date + '</span>' +
+                        '</a></div>'
                     );
                 });
             }
