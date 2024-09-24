@@ -8,6 +8,7 @@
 
 <style>
     .calendar-container {
+        position: relative;
         font-family: 'Roboto', sans-serif;
         background-color: #ffffff;
         border-radius: 15px;
@@ -17,6 +18,12 @@
         display: flex;
         gap: 20px;
     }
+    .calendar-content {
+        display: flex;
+        position: relative;
+        min-height: 600px; /* Adjust this value as needed */
+    }
+
     .fc {
         background-color: #fff;
         border-radius: 10px;
@@ -155,19 +162,43 @@
         border-radius: 10px;
         padding: 20px;
         box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
+        transition: transform 0.3s ease, width 0.3s ease;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
     }
+
     .sidebar.hidden {
         transform: translateX(-100%);
+        width: 0;
+        padding: 0;
+        overflow: hidden;
     }
+
     .main-content {
         flex-grow: 1;
+        margin-left: 300px; /* Width of the sidebar */
+        width: calc(100% - 300px);
+        transition: margin-left 0.3s ease, width 0.3s ease;
     }
+
+    .main-content.expanded {
+        margin-left: 0;
+        width: 100%;
+    }
+
     #toggleSidebar {
         position: absolute;
-        left: 10px;
-        top: 10px;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
         z-index: 1000;
+        transition: left 0.3s ease;
+    }
+
+    #toggleSidebar.sidebar-hidden {
+        left: calc(50% - 150px); /* Half of the sidebar width */
     }
     .unscheduled-list {
         max-height: 500px;
@@ -195,10 +226,7 @@
 </style>
 
 <div class="calendar-container fade-in">
-    <button id="toggleSidebar" class="btn btn-secondary">
-        <i class="fas fa-bars"></i>
-    </button>
-
+    <div class="calendar-content">
     <div class="sidebar" id="sidebar">
         <h3>Unscheduled Services <span class="badge bg-secondary" id="unscheduledCount">0</span></h3>
         <div class="unscheduled-list" id="unscheduledList">
@@ -206,49 +234,54 @@
         </div>
     </div>
 
-    <div class="main-content">
-        <h1 class="text-center mb-4">Service Calendar</h1>
-        <div class="filter-section">
-            <h2 class="filter-title"><i class="fas fa-filter"></i> Filters</h2>
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
-                    <select id="caregiver-select" class="form-control" multiple>
-                        {% for caregiver in caregivers %}
-                            <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
-                        {% endfor %}
-                    </select>
+        <div class="main-content">
+            <h1 class="text-center mb-4">Service Calendar</h1>
+            <div class="filter-section">
+                <h2 class="filter-title"><i class="fas fa-filter"></i> Filters</h2>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
+                        <select id="caregiver-select" class="form-control" multiple>
+                            {% for caregiver in caregivers %}
+                                <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="resident-select"><i class="fas fa-user"></i> Resident:</label>
+                        <select id="resident-select" class="form-control" multiple>
+                            {% for resident in residents %}
+                                <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="care-home-select"><i class="fas fa-home"></i> Care Home:</label>
+                        <select id="care-home-select" class="form-control" multiple>
+                            {% for care_home in care_homes %}
+                                <option value="{{ care_home.id }}">{{ care_home.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="service-type-select"><i class="fas fa-clipboard-list"></i> Service Type:</label>
+                        <select id="service-type-select" class="form-control" multiple>
+                            {% for service_type in service_types %}
+                                <option value="{{ service_type.id }}">{{ service_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label for="resident-select"><i class="fas fa-user"></i> Resident:</label>
-                    <select id="resident-select" class="form-control" multiple>
-                        {% for resident in residents %}
-                            <option value="{{ resident.id }}">{{ resident.first_name }} {{ resident.last_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="care-home-select"><i class="fas fa-home"></i> Care Home:</label>
-                    <select id="care-home-select" class="form-control" multiple>
-                        {% for care_home in care_homes %}
-                            <option value="{{ care_home.id }}">{{ care_home.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="service-type-select"><i class="fas fa-clipboard-list"></i> Service Type:</label>
-                    <select id="service-type-select" class="form-control" multiple>
-                        {% for service_type in service_types %}
-                            <option value="{{ service_type.id }}">{{ service_type.name }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="text-center mt-3">
+                    <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
                 </div>
             </div>
-            <div class="text-center mt-3">
-                <button id="apply-filter" class="btn btn-primary"><i class="fas fa-check"></i> Apply Filter</button>
-            </div>
+            <div id="calendar"></div>
+
+        <button id="toggleSidebar" class="btn btn-primary">
+            <i class="fas fa-bars"></i> Toggle Sidebar
+        </button>
         </div>
-        <div id="calendar"></div>
     </div>
 </div>
 {% endblock %}
@@ -270,10 +303,16 @@ $(document).ready(function() {
     });
     
     $('#toggleSidebar').on('click', function() {
-        $('#sidebar').toggleClass('hidden');
-        $(this).toggleClass('btn-secondary btn-primary');
+    $('#sidebar').toggleClass('hidden');
+    $('.main-content').toggleClass('expanded');
+    $(this).toggleClass('sidebar-hidden');
+    
+    if ($('#sidebar').hasClass('hidden')) {
+        $(this).html('<i class="fas fa-bars"></i> Show Sidebar');
+    } else {
+        $(this).html('<i class="fas fa-bars"></i> Hide Sidebar');
+    }
     });
-
     var filterApplied = false;
 
     var calendarEl = document.getElementById('calendar');
