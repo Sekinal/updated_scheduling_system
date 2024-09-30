@@ -29,6 +29,7 @@
         border-radius: 10px;
         overflow: hidden;
         box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        font-size: 0.85em; /* Decrease the overall font size */
     }
     .fc-toolbar-title {
         font-size: 1.5em !important;
@@ -61,6 +62,9 @@
         text-overflow: ellipsis;
         padding-left: 15px;
         position: relative;
+        font-size: 0.9em;
+        line-height: 1.2;
+        padding: 2px 4px;
     }
     .fc-event-rectangle {
         position: absolute;
@@ -222,6 +226,41 @@
     }
     .unscheduled-item .badge {
         float: right;
+    }
+
+    /* New styles for decreasing text size and fitting more schedules */
+    .fc .fc-daygrid-day-number {
+        font-size: 0.9em;
+        padding: 2px 4px;
+    }
+
+    .fc .fc-daygrid-day-top {
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .fc .fc-daygrid-event {
+        font-size: 0.8em;
+        padding: 1px 2px;
+    }
+
+    .fc .fc-timegrid-slot-label {
+        font-size: 0.8em;
+    }
+
+    .fc .fc-timegrid-event {
+        font-size: 0.8em;
+    }
+
+    .fc .fc-list-event-title,
+    .fc .fc-list-event-time {
+        font-size: 0.9em;
+    }
+
+    .fc-event-service-type {
+        font-size: 0.8em;
+        opacity: 0.8;
+        padding: 0 4px 2px;
     }
 </style>
 
