@@ -507,7 +507,12 @@ $(document).ready(function() {
                                     text: 'Edit Service Frequency',
                                     class: 'btn btn-primary btn-block mb-2',
                                     click: function() {
-                                        window.location.href = '/services/frequency/' + info.event.id + '/edit/';
+                                        var frequencyId = info.event.extendedProps.frequencyId;
+                                        if (frequencyId) {
+                                            window.location.href = '/services/edit-service-frequency/' + frequencyId + '/';
+                                        } else {
+                                            alert('This service does not have an associated frequency.');
+                                        }
                                     }
                                 }).appendTo(modalBody);
 
@@ -561,7 +566,7 @@ $(document).ready(function() {
                         residents: residents.join(','),
                         care_homes: careHomes.join(','),
                         service_types: serviceTypes.join(','),
-                        filter_applied: filterApplied  // Add this parameter
+                        filter_applied: filterApplied
                     },
                     success: function(data) {
                         var events = data.map(function(event) {
@@ -575,7 +580,8 @@ $(document).ready(function() {
                                     resident: event.resident,
                                     serviceType: event.serviceType,
                                     caregiver: event.caregiver,
-                                    status: event.status
+                                    status: event.status,
+                                    frequencyId: event.frequencyId
                                 }
                             };
                         });
