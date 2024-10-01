@@ -78,6 +78,39 @@
         background-color: #e74c3c;
         border-color: #e74c3c;
     }
+    .fc-list-event-table th,
+    .fc-list-event-table td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .fc-list-event-table th {
+        font-weight: bold;
+        background-color: #f8f9fa;
+    }
+
+    .fc-list-event-table .fc-list-event-time {
+        width: 15%;
+    }
+
+    .fc-list-event-table .fc-list-event-title {
+        width: 30%;
+    }
+
+    .fc-list-event-table .fc-list-event-caregiver {
+        width: 25%;
+    }
+
+    .fc-list-event-table .fc-list-event-status {
+        width: 15%;
+    }
+
+    .fc-list-event-table .fc-list-event-actions {
+        width: 15%;
+        text-align: right;
+    }
     .fc-timegrid-event .fc-event-title {
         white-space: normal;
         overflow: visible;
@@ -375,42 +408,54 @@ $(document).ready(function() {
                 listMonth: { buttonText: 'List' }
             },
             eventContent: function(arg) {
-                if (arg.event.extendedProps.type === 'blocked') {
+            if (arg.event.extendedProps.type === 'blocked') {
+                return {
+                    html: '<div class="fc-event-main">' + arg.event.title + '</div>'
+                };
+            } else {
+                var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                var timeString = startTime + ' - ' + endTime;
+                var residentName = arg.event.extendedProps.resident;
+                var serviceType = arg.event.extendedProps.serviceType;
+                var caregiver = arg.event.extendedProps.caregiver;
+                var status = arg.event.extendedProps.status;
+
+                if (arg.view.type === 'listMonth') {
                     return {
-                        html: '<div class="fc-event-main">' + arg.event.title + '</div>'
+                        html: '<table class="fc-list-event-table">' +
+                            '<tr>' +
+                                '<th>Resident</th>' +
+                                '<th>Service Type</th>' +
+                                '<th>Caregiver</th>' +
+                                '<th>Status</th>' +
+                                '<th>Actions</th>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="fc-list-event-title">' + residentName + '</td>' +
+                                '<td class="fc-list-event-service-type">' + serviceType + '</td>' +
+                                '<td class="fc-list-event-caregiver">' + caregiver + '</td>' +
+                                '<td class="fc-list-event-status">' + status + '</td>' +
+                                '<td class="fc-list-event-actions"></td>' +
+                            '</tr>' +
+                        '</table>'
+                    };
+                } else if (arg.view.type === 'dayGridMonth') {
+                    return {
+                        html: '<div class="fc-event-rectangle"></div>' +
+                            '<div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>' +
+                            '<div class="fc-event-service-type">' + serviceType + '</div>'
                     };
                 } else {
-                    var startTime = arg.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    var endTime = arg.event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    var timeString = startTime + ' - ' + endTime;
-                    var residentName = arg.event.extendedProps.resident;
-                    var serviceType = arg.event.extendedProps.serviceType;
-                    var caregiver = arg.event.extendedProps.caregiver;
-                    var status = arg.event.extendedProps.status;
-                    
-                    if (arg.view.type === 'listMonth') {
-                        
-                        return {
-                            html: '<div class="fc-list-event-time">' + timeString + '</div>' +
-                                '<div class="fc-list-event-title">' + residentName + ' - ' + serviceType + '</div>' +
-                                '<div class="fc-list-event-caregiver">Caregiver: ' + caregiver + '</div>' +
-                                '<div class="fc-list-event-status">Status: ' + status + '</div>'
-                        };
-                    } else if (arg.view.type === 'dayGridMonth') {
-                        return {
-                            html: '<div class="fc-event-rectangle"></div>' +
-                                '<div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>' +
-                                '<div class="fc-event-service-type">' + serviceType + '</div>'
-                        };
-                    } else {
-                        return {
-                            html: '<div class="fc-event-rectangle"></div>' +
-                                '<div class="fc-event-title">' + timeString + ' ' + residentName + '</div>' +
-                                '<div class="fc-event-service-type">' + serviceType + '</div>'
-                        };
-                    }
+                    return {
+                        html: '<div class="fc-event-rectangle"></div>' +
+                            '<div class="fc-event-title">' + timeString + ' ' + residentName + '</div>' +
+                            '<div class="fc-event-service-type">' + serviceType + '</div>'
+                    };
                 }
-            },
+            }
+        },
+
             eventClassNames: function(arg) {
                 if (arg.event.extendedProps.type === 'blocked') {
                     return ['fc-event-blocked'];
@@ -495,7 +540,7 @@ $(document).ready(function() {
                             }
                         });
 
-                        $(info.el).find('.fc-list-event-title')
+                        $(info.el).find('.fc-list-event-actions')
                             .append(editButton)
                             .append(deleteButton);
                     }
