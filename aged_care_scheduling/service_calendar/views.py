@@ -62,7 +62,9 @@ def get_events(request):
         'end': service.end_time.isoformat(),
         'resident': f"{service.resident.first_name} {service.resident.last_name}",
         'serviceType': service.service_type.name,
-        'type': 'service'
+        'type': 'service',
+        'caregiver': service.caregiver.username if service.caregiver else 'Not assigned',
+        'status': service.get_status_display()
     } for service in services]
     
     if filter_applied:

@@ -385,8 +385,18 @@ $(document).ready(function() {
                     var timeString = startTime + ' - ' + endTime;
                     var residentName = arg.event.extendedProps.resident;
                     var serviceType = arg.event.extendedProps.serviceType;
+                    var caregiver = arg.event.extendedProps.caregiver;
+                    var status = arg.event.extendedProps.status;
                     
-                    if (arg.view.type === 'dayGridMonth') {
+                    if (arg.view.type === 'listMonth') {
+                        
+                        return {
+                            html: '<div class="fc-list-event-time">' + timeString + '</div>' +
+                                '<div class="fc-list-event-title">' + residentName + ' - ' + serviceType + '</div>' +
+                                '<div class="fc-list-event-caregiver">Caregiver: ' + caregiver + '</div>' +
+                                '<div class="fc-list-event-status">Status: ' + status + '</div>'
+                        };
+                    } else if (arg.view.type === 'dayGridMonth') {
                         return {
                             html: '<div class="fc-event-rectangle"></div>' +
                                 '<div class="fc-event-title">' + timeString + '<br>' + residentName + '</div>' +
@@ -510,22 +520,20 @@ $(document).ready(function() {
                     },
                     success: function(data) {
                         var events = data.map(function(event) {
-                            // Only include blocked events if a filter has been applied
-                            if (event.type !== 'blocked' || filterApplied) {
-                                return {
-                                    id: event.id,
-                                    title: event.type === 'blocked' ? event.title : event.resident,
-                                    start: event.start,
-                                    end: event.end,
-                                    allDay: false,
-                                    extendedProps: {
-                                        type: event.type,
-                                        resident: event.resident,
-                                        serviceType: event.serviceType
-                                    }
-                                };
-                            }
-                        }).filter(Boolean);  // Remove undefined entries
+                            return {
+                                id: event.id,
+                                title: event.title,
+                                start: event.start,
+                                end: event.end,
+                                extendedProps: {
+                                    type: event.type,
+                                    resident: event.resident,
+                                    serviceType: event.serviceType,
+                                    caregiver: event.caregiver,
+                                    status: event.status
+                                }
+                            };
+                        });
                         successCallback(events);
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
