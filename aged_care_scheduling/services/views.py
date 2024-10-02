@@ -190,7 +190,7 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
         service = form.save(commit=False)
         
         if service.status == 'completed':
-            service.mark_as_completed()
+            service.mark_as_completed(service.completion_reason)
             messages.success(self.request, f"Service for {service.resident} has been marked as completed.")
         elif service.status == 'refused':
             service.mark_as_refused()
@@ -202,6 +202,7 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
             else:
                 messages.warning(self.request, f"Service for {service.resident} has been marked as not completed but could not be rescheduled.")
         
+        service.save()
         return super().form_valid(form)
 
     def form_invalid(self, form):
@@ -210,7 +211,6 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
-
 
 class EscalationListView(LoginRequiredMixin, ListView):
     model = Escalation
