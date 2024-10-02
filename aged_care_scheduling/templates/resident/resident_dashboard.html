@@ -79,7 +79,63 @@
 .modal-body {
     overflow-y: auto;
 }
-    
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18px;
+    height: 100%;
+    width: 4px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 4px solid #fff;
+    box-shadow: 0 0 0 4px #e9ecef;
+}
+
+.timeline-content {
+    margin-left: 60px;
+    background: #fff;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.05);
+}
+
+.timeline-content h6 {
+    margin-top: 0;
+    color: #333;
+}
+
+.timeline-content .badge {
+    font-size: 0.8rem;
+    padding: 0.35em 0.65em;
+}
+
+.btn-group .btn {
+    margin-right: 5px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
 </style>
 {% endblock %}
 
@@ -203,93 +259,95 @@
             </div>
         </div>
     
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-history fa-icon-sm"></i> Visit History
-                    </h2>
-                </div>
-                <div class="card-body">
-                    {% if visit_history %}
-                        <div class="list-group list-group-flush">
-                        {% for service in visit_history %}
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-0">{{ service.service_type.name }}</h6>
-                                        <small class="text-muted">
-                                            <i class="far fa-calendar-alt fa-icon-sm"></i> {{ service.scheduled_time|date:"F d, Y H:i" }}
-                                        </small>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">
+                            <i class="fas fa-history fa-icon-sm"></i> Visit History
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        {% if visit_history %}
+                            <div class="timeline">
+                                {% for service in visit_history %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker {% if service.status == 'completed' %}bg-success{% elif service.status == 'scheduled' %}bg-warning{% else %}bg-danger{% endif %}"></div>
+                                        <div class="timeline-content">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-1">{{ service.service_type.name }}</h6>
+                                                <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }} badge-custom">
+                                                    {{ service.get_status_display }}
+                                                </span>
+                                            </div>
+                                            <p class="text-muted mb-2">
+                                                <i class="far fa-calendar-alt fa-icon-sm"></i> {{ service.scheduled_time|date:"F d, Y" }}
+                                                <i class="far fa-clock fa-icon-sm ml-2"></i> {{ service.scheduled_time|date:"H:i" }}
+                                            </p>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary btn-custom">
+                                                    <i class="fas fa-edit fa-icon-sm"></i> Edit
+                                                </a>
+                                                <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary btn-custom">
+                                                    <i class="fas fa-sync-alt fa-icon-sm"></i> Update Status
+                                                </a>
+                                                <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger btn-custom">
+                                                    <i class="fas fa-trash fa-icon-sm"></i> Delete
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <a href="{% url 'service_update' service.id %}" class="btn btn-sm btn-outline-secondary btn-custom mr-1">
-                                            <i class="fas fa-edit fa-icon-sm"></i>
-                                        </a>
-                                        <a href="{% url 'service_status_update' service.id %}" class="btn btn-sm btn-outline-primary btn-custom mr-1">
-                                            <i class="fas fa-sync-alt fa-icon-sm"></i>
-                                        </a>
-                                        <a href="{% url 'service_delete' service.id %}" class="btn btn-sm btn-outline-danger btn-custom">
-                                            <i class="fas fa-trash fa-icon-sm"></i>
-                                        </a>
-                                        <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }} badge-custom ml-2">
-                                            {{ service.get_status_display }}
-                                        </span>
-                                    </div>
-                                </div>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
-                        </div>
-                        
-                        {% if visit_history.has_other_pages %}
-                            <nav aria-label="Visit history pagination" class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    {% if visit_history.has_previous %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page={{ visit_history.previous_page_number }}">
-                                                <i class="fas fa-chevron-left fa-icon-sm"></i>
-                                            </a>
-                                        </li>
-                                    {% else %}
-                                        <li class="page-item disabled">
-                                            <span class="page-link"><i class="fas fa-chevron-left fa-icon-sm"></i></span>
-                                        </li>
-                                    {% endif %}
-
-                                    {% for i in visit_history.paginator.page_range %}
-                                        {% if visit_history.number == i %}
-                                            <li class="page-item active">
-                                                <span class="page-link">{{ i }}</span>
+                            
+                            {% if visit_history.has_other_pages %}
+                                <nav aria-label="Visit history pagination" class="mt-4">
+                                    <ul class="pagination justify-content-center">
+                                        {% if visit_history.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ visit_history.previous_page_number }}">
+                                                    <i class="fas fa-chevron-left fa-icon-sm"></i>
+                                                </a>
                                             </li>
                                         {% else %}
-                                            <li class="page-item">
-                                                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                                            <li class="page-item disabled">
+                                                <span class="page-link"><i class="fas fa-chevron-left fa-icon-sm"></i></span>
                                             </li>
                                         {% endif %}
-                                    {% endfor %}
-
-                                    {% if visit_history.has_next %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page={{ visit_history.next_page_number }}">
-                                                <i class="fas fa-chevron-right fa-icon-sm"></i>
-                                            </a>
-                                        </li>
-                                    {% else %}
-                                        <li class="page-item disabled">
-                                            <span class="page-link"><i class="fas fa-chevron-right fa-icon-sm"></i></span>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </nav>
+        
+                                        {% for i in visit_history.paginator.page_range %}
+                                            {% if visit_history.number == i %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ i }}</span>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+        
+                                        {% if visit_history.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ visit_history.next_page_number }}">
+                                                    <i class="fas fa-chevron-right fa-icon-sm"></i>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link"><i class="fas fa-chevron-right fa-icon-sm"></i></span>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">No visit history available.</p>
                         {% endif %}
-                    {% else %}
-                        <p class="text-muted">No visit history available.</p>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     
     <div class="mt-5 text-center">
         <a href="{% url 'residents:resident_update' resident.pk %}" class="btn btn-primary btn-custom mx-2">
