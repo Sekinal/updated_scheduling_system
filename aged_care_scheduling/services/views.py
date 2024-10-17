@@ -138,32 +138,43 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
-        queryset = Service.objects.filter(resident=self.resident)
+        resident_id = self.kwargs.get('resident_id')
+        queryset = Service.objects.filter(resident_id=resident_id)
 
         # Apply filters
+        filters = Q()
+
         status = self.request.GET.get('status')
-        service_type = self.request.GET.get('service_type')
-        month = self.request.GET.get('month')
-        caregiver = self.request.GET.get('caregiver')
-
         if status:
-            queryset = queryset.filter(status=status)
-        if service_type:
-            queryset = queryset.filter(service_type_id=service_type)
-        if month:
-            queryset = queryset.filter(due_date__month=month)
-        if caregiver:
-            queryset = queryset.filter(caregiver_id=caregiver)
+            filters &= Q(status=status)
 
-        return queryset.order_by('due_date')
+        service_type = self.request.GET.get('service_type')
+        if service_type:
+            filters &= Q(service_type_id=service_type)
+
+        month = self.request.GET.get('month')
+        if month:
+            filters &= Q(scheduled_time__month=month)
+
+        caregiver = self.request.GET.get('caregiver')
+        if caregiver:
+            if caregiver == 'unassigned':
+                filters &= Q(caregiver__isnull=True)
+            else:
+                filters &= Q(caregiver_id=caregiver)
+
+        return queryset.filter(filters).order_by('scheduled_time')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['resident'] = self.resident
+        resident_id = self.kwargs.get('resident_id')
+        context['resident'] = Resident.objects.get(id=resident_id)
         context['service_types'] = ServiceType.objects.all()
-        context['months'] = [(i, month_name[i]) for i in range(1, 13)]  # (month number, month name) pairs
-        context['caregivers'] = User.objects.filter(userprofile__role='staff', is_active=True).select_related('userprofile')        
+        context['months'] = [(i, month_name[i]) for i in range(1, 13)]
+        context['caregivers'] = User.objects.filter(
+            userprofile__role='staff',
+            is_active=True
+        ).select_related('userprofile')
         context['statuses'] = Service.SERVICE_STATUS
 
         # Preserve filter parameters
