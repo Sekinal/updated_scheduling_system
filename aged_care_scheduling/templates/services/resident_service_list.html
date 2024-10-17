@@ -57,29 +57,24 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
-  .filter-container {
+  .filter-form {
     background-color: #ffffff;
     padding: 1.5rem;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
   }
-  .filter-select {
+  .filter-form select {
     margin-bottom: 1rem;
   }
   @media (min-width: 768px) {
-    .filter-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .filter-form .row {
+      align-items: flex-end;
     }
-    .filter-select {
+    .filter-form select {
       margin-bottom: 0;
-      margin-right: 1rem;
-      flex: 1;
     }
   }
-
   .pagination .page-link {
     border-radius: 50%;
     margin: 0 5px;
@@ -88,57 +83,74 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="container">
-    <h2 class="mb-0">Services for {{ resident.first_name }} {{ resident.last_name }}</h2>
-  </div>
-</div>
+<div class="container mt-4">
+  <h2 class="mb-4">Services for {{ resident.first_name }} {{ resident.last_name }}</h2>
 
-<div class="container">
-  <div class="filter-container">
-    <a href="{% url 'residents:resident_dashboard' resident.id %}" class="btn btn-primary filter-select">
-      <i class="fas fa-arrow-left"></i> Back to Dashboard
-    </a>
-    <button class="btn btn-secondary filter-select" id="toggle-view">
+  <form method="get" class="filter-form">
+    <div class="row">
+      <div class="col-md-3 mb-3">
+        <label for="status" class="form-label">Status</label>
+        <select name="status" id="status" class="form-select">
+          <option value="">All Statuses</option>
+          {% for status_value, status_label in statuses %}
+            <option value="{{ status_value }}" {% if current_filters.status == status_value %}selected{% endif %}>
+              {{ status_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label for="service_type" class="form-label">Service Type</label>
+        <select name="service_type" id="service_type" class="form-select">
+          <option value="">All Service Types</option>
+          {% for service_type in service_types %}
+            <option value="{{ service_type.id }}" {% if current_filters.service_type == service_type.id|stringformat:"i" %}selected{% endif %}>
+              {{ service_type.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 mb-3">
+        <label for="month" class="form-label">Month</label>
+        <select name="month" id="month" class="form-select">
+          <option value="">All Months</option>
+          {% for month_number, month_name in months %}
+            <option value="{{ month_number }}" {% if current_filters.month == month_number|stringformat:"i" %}selected{% endif %}>
+              {{ month_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label for="caregiver" class="form-label">Caregiver</label>
+        <select name="caregiver" id="caregiver" class="form-select">
+          <option value="">All Caregivers</option>
+          {% for caregiver in caregivers %}
+            <option value="{{ caregiver.id }}" {% if current_filters.caregiver == caregiver.id|stringformat:"i" %}selected{% endif %}>
+              {% if caregiver.get_full_name %}
+                {{ caregiver.get_full_name }}
+              {% else %}
+                {{ caregiver.username }}
+              {% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1 mb-3">
+        <button type="submit" class="btn btn-primary w-100">Filter</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="mb-3">
+    <button class="btn btn-secondary" id="toggle-view">
       <i class="fas fa-th-large" id="view-icon"></i> Toggle View
     </button>
-    <select class="form-select filter-select" id="filter-status">
-      <option value="">Filter by Status</option>
-      <option value="scheduled">Scheduled</option>
-      <option value="completed">Completed</option>
-      <option value="unscheduled">Unscheduled</option>
-      <option value="not_completed">Not Completed</option>
-      <option value="refused">Refused</option>
-      <option value="missed">Missed</option>
-    </select>
-    <select class="form-select filter-select" id="filter-service-type">
-      <option value="">Filter by Service Type</option>
-      {% for service_type in service_types %}
-        <option value="{{ service_type.id }}">{{ service_type.name }}</option>
-      {% endfor %}
-    </select>
-    <select class="form-select filter-select" id="filter-month">
-      <option value="">Filter by Month</option>
-      {% for month in months %}
-        <option value="{{ month }}">{{ month }}</option>
-      {% endfor %}
-    </select>
-    <select class="form-select filter-select" id="filter-caregiver">
-      <option value="">Filter by Caregiver</option>
-      {% for caregiver in caregivers %}
-        <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
-      {% endfor %}
-    </select>
   </div>
 
   <div id="services-container" class="grid-view">
-    {% if services %}
-      {% for service in services %}
-      <div class="service-card" 
-      data-service-type="{{ service.service_type.id }}"
-      data-caregiver="{{ service.caregiver.id|default:'' }}"
-      data-month="{{ service.due_date|date:'F' }}"
-      data-status="{{ service.status }}">
+    {% for service in services %}
+      <div class="service-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0">{{ service.service_type }}</h5>
           <span class="status-icon">
@@ -190,12 +202,11 @@
           </div>
         </div>
       </div>
-      {% endfor %}
-    {% else %}
+    {% empty %}
       <div class="alert alert-info" role="alert">
-        <i class="fas fa-info-circle me-2"></i> No services scheduled for this resident.
+        <i class="fas fa-info-circle me-2"></i> No services found matching the current filters.
       </div>
-    {% endif %}
+    {% endfor %}
   </div>
 
   {% if is_paginated %}
@@ -203,13 +214,9 @@
       <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous">
               <span aria-hidden="true">&laquo;</span>
             </a>
-          </li>
-        {% else %}
-          <li class="page-item disabled">
-            <span class="page-link" aria-hidden="true">&laquo;</span>
           </li>
         {% endif %}
 
@@ -217,19 +224,17 @@
           {% if page_obj.number == i %}
             <li class="page-item active"><span class="page-link">{{ i }}</span></li>
           {% else %}
-            <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+            <li class="page-item">
+              <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ i }}">{{ i }}</a>
+            </li>
           {% endif %}
         {% endfor %}
 
         {% if page_obj.has_next %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next">
               <span aria-hidden="true">&raquo;</span>
             </a>
-          </li>
-        {% else %}
-          <li class="page-item disabled">
-            <span class="page-link" aria-hidden="true">&raquo;</span>
           </li>
         {% endif %}
       </ul>
@@ -242,43 +247,15 @@
     const containerView = document.getElementById('services-container');
     const toggleViewButton = document.getElementById('toggle-view');
     const viewIcon = document.getElementById('view-icon');
-    const filterServiceType = document.getElementById('filter-service-type');
-    const filterMonth = document.getElementById('filter-month');
-    const filterCaregiver = document.getElementById('filter-caregiver');
-    const filterStatus = document.getElementById('filter-status');  // New filter
-  
-    toggleViewButton.addEventListener('click', () => {
-      containerView.classList.toggle('grid-view');
-      containerView.classList.toggle('list-view');
-      viewIcon.classList.toggle('fa-th-large');
-      viewIcon.classList.toggle('fa-th-list');
-    });
-  
-    function applyFilters() {
-      const serviceTypeId = filterServiceType.value;
-      const month = filterMonth.value;
-      const caregiverId = filterCaregiver.value;
-      const status = filterStatus.value;  // New filter value
-  
-      const services = document.querySelectorAll('.service-card');
-      services.forEach((service) => {
-        const matchesServiceType = serviceTypeId === '' || service.dataset.serviceType === serviceTypeId;
-        const matchesMonth = month === '' || service.dataset.month === month;
-        const matchesCaregiver = caregiverId === '' || service.dataset.caregiver === caregiverId;
-        const matchesStatus = status === '' || service.dataset.status === status;  // New condition
-  
-        if (matchesServiceType && matchesMonth && matchesCaregiver && matchesStatus) {
-          service.style.display = '';
-        } else {
-          service.style.display = 'none';
-        }
+
+    if (toggleViewButton) {
+      toggleViewButton.addEventListener('click', () => {
+        containerView.classList.toggle('grid-view');
+        containerView.classList.toggle('list-view');
+        viewIcon.classList.toggle('fa-th-large');
+        viewIcon.classList.toggle('fa-th-list');
       });
     }
-  
-    filterServiceType.addEventListener('change', applyFilters);
-    filterMonth.addEventListener('change', applyFilters);
-    filterCaregiver.addEventListener('change', applyFilters);
-    filterStatus.addEventListener('change', applyFilters);  // New event listener
   });
-  </script>
+</script>
 {% endblock %}
