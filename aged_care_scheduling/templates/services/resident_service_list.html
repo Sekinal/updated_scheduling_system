@@ -121,10 +121,12 @@
           {% endfor %}
         </select>
       </div>
+      <!-- Caregiver Filter Dropdown -->
       <div class="col-md-3 mb-3">
         <label for="caregiver" class="form-label">Caregiver</label>
         <select name="caregiver" id="caregiver" class="form-select">
           <option value="">All Caregivers</option>
+          <option value="unassigned" {% if current_filters.caregiver == "unassigned" %}selected{% endif %}>Unassigned</option>
           {% for caregiver in caregivers %}
             <option value="{{ caregiver.id }}" {% if current_filters.caregiver == caregiver.id|stringformat:"i" %}selected{% endif %}>
               {% if caregiver.get_full_name %}

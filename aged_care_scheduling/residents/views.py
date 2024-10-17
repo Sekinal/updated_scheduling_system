@@ -4,6 +4,8 @@ from django.urls import reverse
 import calendar
 from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
+from calendar import month_name
+
 from .models import Resident
 from .forms import ResidentForm
 from services.models import Service, ServiceType, ResidentServiceFrequency
@@ -175,18 +177,56 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
     model = Service
     template_name = 'services/resident_service_list.html'
     context_object_name = 'services'
-    paginate_by = 10  # Number of services per page
+    paginate_by = 10
 
     def get_queryset(self):
-        self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
-        return Service.objects.filter(resident=self.resident).order_by('scheduled_time')
+        resident_id = self.kwargs.get('resident_id')
+        queryset = Service.objects.filter(resident_id=resident_id)
+
+        # Apply filters
+        filters = Q()
+
+        status = self.request.GET.get('status')
+        if status:
+            filters &= Q(status=status)
+
+        service_type = self.request.GET.get('service_type')
+        if service_type:
+            filters &= Q(service_type_id=service_type)
+
+        month = self.request.GET.get('month')
+        if month:
+            filters &= Q(scheduled_time__month=month)
+
+        caregiver = self.request.GET.get('caregiver')
+        if caregiver:
+            if caregiver == 'unassigned':
+                filters &= Q(caregiver__isnull=True)
+            else:
+                filters &= Q(caregiver_id=caregiver)
+
+        return queryset.filter(filters).order_by('scheduled_time')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['resident'] = self.resident
+        resident_id = self.kwargs.get('resident_id')
+        context['resident'] = Resident.objects.get(id=resident_id)
         context['service_types'] = ServiceType.objects.all()
-        context['months'] = [calendar.month_name[month.month] for month in Service.objects.dates('due_date', 'month')]
-        context['caregivers'] = UserProfile.objects.filter(role='staff', user__is_active=True)
+        context['months'] = [(i, month_name[i]) for i in range(1, 13)]
+        context['caregivers'] = User.objects.filter(
+            userprofile__role='staff',
+            is_active=True
+        ).select_related('userprofile')
+        context['statuses'] = Service.SERVICE_STATUS
+
+        # Preserve filter parameters
+        context['current_filters'] = {
+            'status': self.request.GET.get('status', ''),
+            'service_type': self.request.GET.get('service_type', ''),
+            'month': self.request.GET.get('month', ''),
+            'caregiver': self.request.GET.get('caregiver', ''),
+        }
+
         return context
 
 class DeleteAllServicesView(LoginRequiredMixin, View):
