@@ -127,7 +127,18 @@ class ServiceTypeForm(forms.ModelForm):
 class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
-        fields = ['resident', 'service_type', 'caregiver', 'scheduled_time', 'end_time', 'status', 'completion_reason', 'reschedule_reason', 'completion_notes', 'due_date']
+        fields = [
+            'resident',
+            'service_type',
+            'caregiver',
+            'scheduled_time',
+            'end_time',
+            'status',
+            'completion_reason',
+            'reschedule_reason',
+            'completion_notes',
+            'due_date'
+        ]
         widgets = {
             'scheduled_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -135,56 +146,28 @@ class ServiceForm(forms.ModelForm):
             'completion_notes': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['completion_reason'].required = False
-        self.fields['reschedule_reason'].required = False
-        self.fields['completion_notes'].required = False
-        self.fields['resident'].widget.attrs['readonly'] = True
-        self.fields['scheduled_time'].required = False
-        self.fields['end_time'].required = False
-        self.fields['caregiver'].required = False
-
     def clean(self):
         cleaned_data = super().clean()
         status = cleaned_data.get('status')
         completion_reason = cleaned_data.get('completion_reason')
         reschedule_reason = cleaned_data.get('reschedule_reason')
-        scheduled_time = cleaned_data.get('scheduled_time')
-        end_time = cleaned_data.get('end_time')
-        caregiver = cleaned_data.get('caregiver')
 
-        if status == 'scheduled':
-            if not scheduled_time:
-                self.add_error('scheduled_time', "Scheduled time is required for scheduled services.")
-            if not end_time:
-                self.add_error('end_time', "End time is required for scheduled services.")
-            if not caregiver:
-                self.add_error('caregiver', "Caregiver is required for scheduled services.")
+        if status == 'completed' and not completion_reason:
+            self.add_error('completion_reason', "Completion reason is required when status is 'completed'.")
 
-        if status == 'completed':
-            if not completion_reason:
-                self.add_error('completion_reason', "Please provide a completion reason for completed services.")
-            if reschedule_reason:
-                self.add_error('reschedule_reason', "Reschedule reason should not be provided for completed services.")
-        
-        elif status == 'not_completed':
-            if not reschedule_reason:
-                self.add_error('reschedule_reason', "Please provide a reason for not completing the service.")
-            if completion_reason:
-                self.add_error('completion_reason', "Completion reason should not be provided for not completed services.")
-        
-        elif status == 'refused':
-            if completion_reason != 'refused':
-                self.add_error('completion_reason', "Completion reason for refused services should be 'refused'.")
-            if reschedule_reason:
-                self.add_error('reschedule_reason', "Reschedule reason should not be provided for refused services.")
+        if status == 'not_completed' and not reschedule_reason:
+            self.add_error('reschedule_reason', "Reschedule reason is required when status is 'not_completed'.")
+
+        if status == 'unscheduled':
+            # Optionally, ensure that scheduled_time and end_time are cleared
+            cleaned_data['scheduled_time'] = None
+            cleaned_data['end_time'] = None
 
         return cleaned_data
 
     def save(self, commit=True):
         service = super().save(commit=False)
-        
+
         if service.status == 'scheduled' and not service.scheduled_time:
             service.scheduled_time = timezone.now()
             service.end_time = service.scheduled_time + service.service_type.duration
@@ -195,6 +178,10 @@ class ServiceForm(forms.ModelForm):
             service.mark_as_not_completed(service.reschedule_reason)
         elif service.status == 'completed':
             service.mark_as_completed(service.completion_reason)
+        elif service.status == 'unscheduled':
+            # Ensure scheduled_time and end_time are cleared
+            service.scheduled_time = None
+            service.end_time = None
 
         if commit:
             service.save()

@@ -216,20 +216,27 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         service = form.save(commit=False)
-        
-        if service.status == 'completed':
-            service.mark_as_completed(service.completion_reason)
-            messages.success(self.request, f"Service for {service.resident} has been marked as completed.")
-        elif service.status == 'refused':
-            service.mark_as_refused()
-            messages.warning(self.request, f"Service for {service.resident} has been marked as refused.")
-        elif service.status == 'not_completed':
-            rescheduled_service = service.mark_as_not_completed(service.reschedule_reason)
-            if rescheduled_service:
-                messages.info(self.request, f"Service for {service.resident} has been marked as not completed and rescheduled to {rescheduled_service.scheduled_time}.")
+        old_status = Service.objects.get(pk=service.pk).status
+
+        if service.status != old_status:
+            if service.status == 'completed':
+                service.mark_as_completed(service.completion_reason)
+                messages.success(self.request, f"Service for {service.resident} has been marked as completed.")
+            elif service.status == 'refused':
+                service.mark_as_refused()
+                messages.warning(self.request, f"Service for {service.resident} has been marked as refused.")
+            elif service.status == 'not_completed':
+                rescheduled_service = service.mark_as_not_completed(service.reschedule_reason)
+                if rescheduled_service:
+                    messages.info(self.request, f"Service for {service.resident} has been marked as not completed and rescheduled to {rescheduled_service.scheduled_time}.")
+                else:
+                    messages.warning(self.request, f"Service for {service.resident} has been marked as not completed but could not be rescheduled.")
+            elif service.status == 'unscheduled':
+                # Additional handling for unscheduling if necessary
+                messages.info(self.request, f"Service for {service.resident} has been unscheduled.")
             else:
-                messages.warning(self.request, f"Service for {service.resident} has been marked as not completed but could not be rescheduled.")
-        
+                messages.info(self.request, f"Service status updated from {old_status} to {service.status}.")
+
         service.save()
         return super().form_valid(form)
 
@@ -239,7 +246,6 @@ class ServiceStatusUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('residents:resident_dashboard', kwargs={'pk': self.object.resident.pk})
-
 class EscalationListView(LoginRequiredMixin, ListView):
     model = Escalation
     template_name = 'services/escalation_list.html'
