@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from calendar import month_name
 from accounts.models import UserProfile
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from .models import Service, ServiceType, ResidentPreference, BlockedTime, Escalation
 from .forms import ServiceTypeForm, ServiceForm, ResidentPreferenceForm, BlockedTimeForm, EscalationForm
@@ -138,14 +139,41 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         self.resident = get_object_or_404(Resident, pk=self.kwargs['resident_id'])
-        return Service.objects.filter(resident=self.resident).order_by('due_date')
+        queryset = Service.objects.filter(resident=self.resident)
+
+        # Apply filters
+        status = self.request.GET.get('status')
+        service_type = self.request.GET.get('service_type')
+        month = self.request.GET.get('month')
+        caregiver = self.request.GET.get('caregiver')
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if service_type:
+            queryset = queryset.filter(service_type_id=service_type)
+        if month:
+            queryset = queryset.filter(due_date__month=month)
+        if caregiver:
+            queryset = queryset.filter(caregiver_id=caregiver)
+
+        return queryset.order_by('due_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['resident'] = self.resident
         context['service_types'] = ServiceType.objects.all()
-        context['months'] = list(month_name)[1:]  # This gives full month names
-        context['caregivers'] = UserProfile.objects.filter(role='staff', user__is_active=True)
+        context['months'] = [(i, month_name[i]) for i in range(1, 13)]  # (month number, month name) pairs
+        context['caregivers'] = User.objects.filter(userprofile__role='staff', is_active=True)
+        context['statuses'] = Service.SERVICE_STATUS
+
+        # Preserve filter parameters
+        context['current_filters'] = {
+            'status': self.request.GET.get('status', ''),
+            'service_type': self.request.GET.get('service_type', ''),
+            'month': self.request.GET.get('month', ''),
+            'caregiver': self.request.GET.get('caregiver', ''),
+        }
+
         return context
 
 class ResidentPreferenceCreateView(LoginRequiredMixin, CreateView):
