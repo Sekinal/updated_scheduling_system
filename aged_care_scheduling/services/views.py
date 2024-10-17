@@ -163,7 +163,7 @@ class ResidentServiceListView(LoginRequiredMixin, ListView):
         context['resident'] = self.resident
         context['service_types'] = ServiceType.objects.all()
         context['months'] = [(i, month_name[i]) for i in range(1, 13)]  # (month number, month name) pairs
-        context['caregivers'] = User.objects.filter(userprofile__role='staff', is_active=True)
+        context['caregivers'] = User.objects.filter(userprofile__role='staff', is_active=True).select_related('userprofile')        
         context['statuses'] = Service.SERVICE_STATUS
 
         # Preserve filter parameters

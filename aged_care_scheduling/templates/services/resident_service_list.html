@@ -126,8 +126,12 @@
         <select name="caregiver" id="caregiver" class="form-select">
           <option value="">All Caregivers</option>
           {% for caregiver in caregivers %}
-            <option value="{{ caregiver.user.id }}" {% if current_filters.caregiver == caregiver.user.id|stringformat:"i" %}selected{% endif %}>
-              {{ caregiver.user.get_full_name }}
+            <option value="{{ caregiver.id }}" {% if current_filters.caregiver == caregiver.id|stringformat:"i" %}selected{% endif %}>
+              {% if caregiver.get_full_name %}
+                {{ caregiver.get_full_name }}
+              {% else %}
+                {{ caregiver.username }}
+              {% endif %}
             </option>
           {% endfor %}
         </select>
