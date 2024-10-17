@@ -64,7 +64,8 @@ def get_events(request):
         'serviceType': service.service_type.name,
         'type': 'service',
         'caregiver': service.caregiver.username if service.caregiver else 'Not assigned',
-        'status': service.get_status_display()
+        'status': service.get_status_display(),
+        'frequencyId': str(service.frequency_id) if service.frequency_id else None  # Add this line
     } for service in services]
     
     if filter_applied:
