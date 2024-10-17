@@ -70,8 +70,11 @@ class Service(models.Model):
     frequency_id = models.UUIDField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        # Only adjust status if it's currently 'scheduled' or 'unscheduled'
-        if self.scheduled_time and self.status in ['scheduled', 'unscheduled']:
+        if self.status == 'unscheduled':
+            # Clear scheduled_time and end_time when unscheduling
+            self.scheduled_time = None
+            self.end_time = None
+        elif self.scheduled_time and self.status in ['scheduled', 'unscheduled']:
             # Check if the service time falls within any blocked time
             blocked = BlockedTime.objects.filter(
                 Q(start_date__lte=self.scheduled_time.date(), end_date__gte=self.scheduled_time.date()) &
@@ -85,6 +88,8 @@ class Service(models.Model):
 
             if blocked:
                 self.status = 'unscheduled'
+                self.scheduled_time = None
+                self.end_time = None
             else:
                 self.status = 'scheduled'
 
