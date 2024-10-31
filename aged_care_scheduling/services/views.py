@@ -131,6 +131,7 @@ class ServiceListView(LoginRequiredMixin, ListView):
         context['blocked_times'] = blocked_paginator.get_page(blocked_page)
 
         return context
+    
 class ResidentServiceListView(LoginRequiredMixin, ListView):
     model = Service
     template_name = 'services/resident_service_list.html'
@@ -310,7 +311,6 @@ def edit_service_frequency(request, pk):
                 resident=updated_frequency.resident,
                 service_type=updated_frequency.service_type,
                 status='scheduled',
-                due_date__gte=timezone.now().date()
             ).delete()
             
             # Save the updated frequency
@@ -352,8 +352,7 @@ def delete_service_frequency(request, pk):
     Service.objects.filter(
         resident=service_frequency.resident,
         service_type=service_frequency.service_type,
-        status__in=['unscheduled', 'scheduled'],
-        due_date__gte=timezone.now().date()
+        status__in=['unscheduled', 'scheduled']
     ).delete()
     
     # Delete the service frequency

@@ -66,7 +66,6 @@ class Service(models.Model):
     completion_notes = models.TextField(blank=True, null=True)
     refusal_count = models.PositiveIntegerField(default=0)
     last_refusal_date = models.DateField(null=True, blank=True)
-    due_date = models.DateField(null=True)
     frequency_id = models.UUIDField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
@@ -113,7 +112,6 @@ class Service(models.Model):
         if conflicts.exists():
             raise ValidationError("This service conflicts with an existing service for the resident or caregiver.")
 
-
     def mark_as_completed(self, reason='completed'):
         self.status = 'completed'
         self.completion_reason = reason
@@ -148,8 +146,7 @@ class Service(models.Model):
                 service_type=self.service_type,
                 caregiver=self.caregiver,
                 scheduled_time=next_available_time,
-                status='scheduled',
-                due_date=next_available_time.date()
+                status='scheduled'
             )
             return new_service
         return None
@@ -217,12 +214,10 @@ class Service(models.Model):
 
     @classmethod
     def check_missed_services(cls):
-        yesterday = timezone.now().date() - timedelta(days=1)
         missed_services = cls.objects.filter(
-            Q(due_date=yesterday) & 
             Q(status='unscheduled')
         )
-        
+
         for service in missed_services:
             service.status = 'missed'
             service.save()
@@ -232,12 +227,12 @@ class Service(models.Model):
                 escalation_type='missed',
                 reason="Service not scheduled"
             )
-
+    
     @classmethod
     def create_recurring_services(cls, resident_service_frequency):
         now = timezone.now().date()
         end_date = now + timedelta(days=30)  # Create services for the next 30 days
-        
+
         current_date = now
         while current_date <= end_date:
             if resident_service_frequency.should_create_service(current_date):
@@ -245,12 +240,15 @@ class Service(models.Model):
                     resident=resident_service_frequency.resident,
                     service_type=resident_service_frequency.service_type,
                     status='unscheduled',
-                    due_date=current_date
+                    scheduled_time=timezone.make_aware(datetime.combine(current_date, resident_service_frequency.start_time)),
+                    end_time=timezone.make_aware(datetime.combine(current_date, resident_service_frequency.end_time)),
+                    frequency_id=resident_service_frequency.id,
+                    caregiver=resident_service_frequency.caregiver
                 )
             current_date += timedelta(days=1)
 
     def __str__(self):
-        return f"{self.service_type} for {self.resident} due on {self.due_date}"
+        return f"{self.service_type} for {self.resident} scheduled at {self.scheduled_time}"
 
 class ResidentServiceFrequency(models.Model):
     RECURRENCE_CHOICES = [
@@ -339,7 +337,6 @@ class ResidentServiceFrequency(models.Model):
                             resident=self.resident,
                             service_type=self.service_type,
                             status=status,
-                            due_date=current_date,
                             scheduled_time=scheduled_time,
                             end_time=end_time,
                             frequency_id=self.id,
@@ -376,6 +373,7 @@ class ResidentServiceFrequency(models.Model):
         elif self.recurrence_pattern == 'yearly':
             return date.month == self.start_date.month and date.day == self.start_date.day
         return False
+
     def delete(self, *args, **kwargs):
         # Delete all related services that haven't been completed
         Service.objects.filter(
@@ -396,8 +394,8 @@ class ResidentServiceFrequency(models.Model):
             resident=self.resident,
             service_type=self.service_type,
             status='scheduled',
-            due_date__gte=self.start_date,
-            due_date__lte=self.end_date or timezone.now().date() + timedelta(days=365)
+            scheduled_time__gte=self.start_date,
+            scheduled_time__lte=self.end_date or timezone.now().date() + timedelta(days=365)
         ).delete()
 
     def get_recurrence_pattern_display(self):

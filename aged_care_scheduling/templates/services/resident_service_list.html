@@ -170,7 +170,6 @@
         <div class="card-body">
           <p class="card-text">
             <strong>Scheduled:</strong> {% if service.scheduled_time %}{{ service.scheduled_time|date:"M d, Y h:i A" }}{% else %}Not yet scheduled{% endif %}<br>
-            <strong>Due Date:</strong> {{ service.due_date|date:"M d, Y" }}<br>
             <strong>Caregiver:</strong> {{ service.caregiver|default:"Not assigned" }}<br>
             <strong>Status:</strong> <span class="badge bg-{{ service.status|yesno:'success,warning,danger' }}">{{ service.get_status_display }}</span>
           </p>

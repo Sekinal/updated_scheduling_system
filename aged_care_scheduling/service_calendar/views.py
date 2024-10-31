@@ -133,7 +133,7 @@ def get_unscheduled_services(request):
         'id': service.id,
         'service_type': service.service_type.name,
         'resident': f"{service.resident.first_name} {service.resident.last_name}",
-        'due_date': service.due_date.strftime('%Y-%m-%d') if service.due_date else 'Not set'
+        'scheduled_time': service.scheduled_time.strftime('%Y-%m-%d') if service.scheduled_time else 'Not set'
     } for service in services]
 
     return JsonResponse(data, safe=False)

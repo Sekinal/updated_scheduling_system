@@ -137,12 +137,10 @@ class ServiceForm(forms.ModelForm):
             'completion_reason',
             'reschedule_reason',
             'completion_notes',
-            'due_date'
         ]
         widgets = {
             'scheduled_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'due_date': forms.DateInput(attrs={'type': 'date'}),
             'completion_notes': forms.Textarea(attrs={'rows': 3}),
         }
 
