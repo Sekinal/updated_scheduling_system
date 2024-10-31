@@ -12,6 +12,7 @@ from django.db.models import Q  # Import Q for complex queries
 from django.utils import timezone  # Import timezone for date and time handling
 from datetime import datetime, timedelta
 from dateutil import parser
+from core.models import SiteSettings  # Adjust the import based on your app structure
 
 @login_required
 def calendar_view(request):
@@ -19,11 +20,16 @@ def calendar_view(request):
     residents = Resident.objects.all()
     care_homes = CareHome.objects.all()
     service_types = ServiceType.objects.all()
+
+    # Get current timezone from activated timezone
+    current_timezone = timezone.get_current_timezone_name()
+
     return render(request, 'service_calendar/calendar.html', {
         'caregivers': caregivers,
         'residents': residents,
         'care_homes': care_homes,
         'service_types': service_types,
+        'current_timezone': current_timezone,  # Pass timezone to template
     })
 
 @login_required
@@ -55,35 +61,48 @@ def get_events(request):
     if service_types and service_types[0]:
         services = services.filter(service_type__id__in=service_types)
 
+    current_tz = timezone.get_current_timezone()
+
     events = [{
         'id': service.id,
         'title': f"{service.service_type.name} - {service.resident.first_name} {service.resident.last_name}",
-        'start': service.scheduled_time.isoformat(),
-        'end': service.end_time.isoformat(),
+        'start': timezone.localtime(service.scheduled_time, current_tz).isoformat(),
+        'end': timezone.localtime(service.end_time, current_tz).isoformat(),
         'resident': f"{service.resident.first_name} {service.resident.last_name}",
         'serviceType': service.service_type.name,
         'type': 'service',
         'caregiver': service.caregiver.username if service.caregiver else 'Not assigned',
         'status': service.get_status_display(),
-        'frequencyId': str(service.frequency_id) if service.frequency_id else None  # Add this line
+        'frequencyId': str(service.frequency_id) if service.frequency_id else None
     } for service in services]
-    
+
     if filter_applied:
         blocked_times = BlockedTime.objects.filter(
-            Q(start_date__range=[start.date(), end.date()]) | Q(end_date__range=[start.date(), end.date()])
+            Q(start_date__range=[start.date(), end.date()]) |
+            Q(end_date__range=[start.date(), end.date()])
         )
 
         if caregivers and caregivers[0]:
-            blocked_times = blocked_times.filter(Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True))
+            blocked_times = blocked_times.filter(
+                Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True)
+            )
         if care_homes and care_homes[0]:
-            blocked_times = blocked_times.filter(Q(locations__id__in=care_homes) | Q(locations__isnull=True))
+            blocked_times = blocked_times.filter(
+                Q(locations__id__in=care_homes) | Q(locations__isnull=True)
+            )
 
         for blocked in blocked_times:
+            start_datetime = timezone.make_aware(
+                datetime.combine(blocked.start_date, blocked.start_time), current_tz
+            )
+            end_datetime = timezone.make_aware(
+                datetime.combine(blocked.end_date, blocked.end_time), current_tz
+            )
             events.append({
                 'id': f"blocked_{blocked.id}",
                 'title': f"Blocked: {blocked.reason}",
-                'start': timezone.make_aware(datetime.combine(blocked.start_date, blocked.start_time)).isoformat(),
-                'end': timezone.make_aware(datetime.combine(blocked.end_date, blocked.end_time)).isoformat(),
+                'start': timezone.localtime(start_datetime, current_tz).isoformat(),
+                'end': timezone.localtime(end_datetime, current_tz).isoformat(),
                 'type': 'blocked',
                 'allDay': True,
                 'display': 'background',
