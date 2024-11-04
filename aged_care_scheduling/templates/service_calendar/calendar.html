@@ -314,6 +314,7 @@
                     <div class="col-md-3 mb-3">
                         <label for="caregiver-select"><i class="fas fa-user-nurse"></i> Caregiver:</label>
                         <select id="caregiver-select" class="form-control" multiple>
+                            <option value="unassigned">Unassigned</option> <!-- Add this line -->
                             {% for caregiver in caregivers %}
                                 <option value="{{ caregiver.id }}">{{ caregiver.username }}</option>
                             {% endfor %}
@@ -612,47 +613,9 @@
                 updateUnscheduledServices();  // Update unscheduled services
     
                 // Re-enable the apply filter button after refetch
-                calendar.addEventSource(function(info, successCallback, failureCallback) {
-                    var caregivers = $('#caregiver-select').val() || [];
-                    var residents = $('#resident-select').val() || [];
-                    var careHomes = $('#care-home-select').val() || [];
-                    var serviceTypes = $('#service-type-select').val() || [];
-    
-                    $.ajax({
-                        url: '{% url "get_events" %}',
-                        data: {
-                            start: info.startStr,
-                            end: info.endStr,
-                            caregivers: caregivers.join(','),
-                            residents: residents.join(','),
-                            care_homes: careHomes.join(','),
-                            service_types: serviceTypes.join(','),
-                        },
-                        success: function(data) {
-                            var events = data.map(function(event) {
-                                return {
-                                    id: event.id,
-                                    title: event.type === 'blocked' ? event.title : event.resident,
-                                    start: event.start,
-                                    end: event.end,
-                                    allDay: false,
-                                    extendedProps: {
-                                        type: event.type,
-                                        resident: event.resident,
-                                        serviceType: event.serviceType
-                                    }
-                                };
-                            });
-                            successCallback(events);
-                            $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
-                        },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                            console.error('Failed to fetch events:', textStatus, errorThrown);
-                            failureCallback();
-                            $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
-                        }
-                    });
-                });
+                setTimeout(() => { // Use setTimeout to wait for AJAX to complete
+                    $('#apply-filter').html('<i class="fas fa-check"></i> Apply Filter').prop('disabled', false);
+                }, 1000); // Adjust the timeout as needed
             });
         } else {
             console.error('Calendar element not found');
@@ -723,5 +686,5 @@
             }
         });
     }
-    </script>
+</script>
 {% endblock %}

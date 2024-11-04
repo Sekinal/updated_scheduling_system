@@ -52,8 +52,15 @@ def get_events(request):
         status='scheduled'
     )
 
+    # Handle 'unassigned' caregiver
     if caregivers and caregivers[0]:
-        services = services.filter(caregiver__id__in=caregivers)
+        if 'unassigned' in caregivers:
+            services = services.filter(
+                Q(caregiver__id__in=[c for c in caregivers if c != 'unassigned']) | Q(caregiver__isnull=True)
+            )
+        else:
+            services = services.filter(caregiver__id__in=caregivers)
+    
     if residents and residents[0]:
         services = services.filter(resident__id__in=residents)
     if care_homes and care_homes[0]:
@@ -83,9 +90,12 @@ def get_events(request):
         )
 
         if caregivers and caregivers[0]:
-            blocked_times = blocked_times.filter(
-                Q(caregivers__id__in=caregivers) | Q(caregivers__isnull=True)
-            )
+            if 'unassigned' in caregivers:
+                blocked_times = blocked_times.filter(
+                    Q(caregivers__id__in=[c for c in caregivers if c != 'unassigned']) | Q(caregivers__isnull=True)
+                )
+            else:
+                blocked_times = blocked_times.filter(caregivers__id__in=caregivers)
         if care_homes and care_homes[0]:
             blocked_times = blocked_times.filter(
                 Q(locations__id__in=care_homes) | Q(locations__isnull=True)
@@ -120,8 +130,15 @@ def get_unscheduled_services(request):
 
     services = Service.objects.filter(status='unscheduled')
 
+    # Handle 'unassigned' caregiver
     if caregivers and caregivers[0]:
-        services = services.filter(caregiver__id__in=caregivers)
+        if 'unassigned' in caregivers:
+            services = services.filter(
+                Q(caregiver__id__in=[c for c in caregivers if c != 'unassigned']) | Q(caregiver__isnull=True)
+            )
+        else:
+            services = services.filter(caregiver__id__in=caregivers)
+    
     if residents and residents[0]:
         services = services.filter(resident__id__in=residents)
     if care_homes and care_homes[0]:
