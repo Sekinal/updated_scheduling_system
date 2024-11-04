@@ -368,15 +368,13 @@
 <script>
     $(document).ready(function() {
         // Initialize Select2
-        $('.select2-container').addClass('fade-in');
-        
         $('#caregiver-select, #resident-select, #care-home-select, #service-type-select').select2({
             placeholder: "Select items",
             allowClear: true,
-            theme: "classic"
+            theme: "bootstrap-5"  // Use Bootstrap 5 theme for consistency
         });
         
-        // Toggle Sidebar
+        // Toggle Sidebar (existing logic)
         $('#toggleSidebar').on('click', function() {
             $('#sidebar').toggleClass('hidden');
             $('.main-content').toggleClass('expanded');
@@ -390,18 +388,11 @@
         });
     
         var filterApplied = false;
-    
+
         var calendarEl = document.getElementById('calendar');
         if (calendarEl) {
             var calendar = new FullCalendar.Calendar(calendarEl, {
-                timeZone: '{{ current_timezone }}',  // Set the timezone from the backend
                 editable: true, // Enable drag-and-drop
-                eventDrop: function(info) {
-                    updateEvent(info.event);
-                },
-                eventResize: function(info) {
-                    updateEvent(info.event);
-                },
                 initialView: 'dayGridMonth',
                 headerToolbar: {
                     left: 'prev,next today',
@@ -417,14 +408,14 @@
                             html: '<div class="fc-event-main">' + arg.event.title + '</div>'
                         };
                     } else {
-                        var startTime = moment(arg.event.start).format('HH:mm');
-                        var endTime = moment(arg.event.end).format('HH:mm');
-                        var timeString = startTime + ' - ' + endTime;
+                        var startTime = arg.event.start ? arg.event.start.toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        var endTime = arg.event.end ? arg.event.end.toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        var timeString = `${startTime} - ${endTime}`;
                         var residentName = arg.event.extendedProps.resident;
                         var serviceType = arg.event.extendedProps.serviceType;
                         var caregiver = arg.event.extendedProps.caregiver;
                         var status = arg.event.extendedProps.status;
-    
+
                         if (arg.view.type === 'listMonth') {
                             return {
                                 html: '<table class="fc-list-event-table">' +
@@ -559,7 +550,7 @@
                     var residents = $('#resident-select').val() || [];
                     var careHomes = $('#care-home-select').val() || [];
                     var serviceTypes = $('#service-type-select').val() || [];
-    
+
                     $.ajax({
                         url: '{% url "get_events" %}',
                         data: {
@@ -597,10 +588,16 @@
                     });
                 },
                 dayMaxEvents: 2,
+                eventDrop: function(info) {
+                    updateEvent(info.event);
+                },
+                eventResize: function(info) {
+                    updateEvent(info.event);
+                }
             });
             calendar.render();
             updateUnscheduledServices();
-    
+
             $('#apply-filter').on('click', function() {
                 $(this).html('<i class="fas fa-spinner fa-spin"></i> Applying...').prop('disabled', true);
                 
@@ -621,13 +618,13 @@
             console.error('Calendar element not found');
         }
     });
-    
+
     function updateUnscheduledServices() {
         var caregivers = $('#caregiver-select').val() || [];
         var residents = $('#resident-select').val() || [];
         var careHomes = $('#care-home-select').val() || [];
         var serviceTypes = $('#service-type-select').val() || [];
-    
+
         $.ajax({
             url: '{% url "get_unscheduled_services" %}',
             data: {
@@ -661,10 +658,10 @@
             }
         });
     }
-    
+
     function updateEvent(event) {
         $.ajax({
-            url: '/services/update_event/',  // You'll need to create this URL
+            url: '/services/update_event/',  // Ensure this URL is correctly routed in your URLs
             method: 'POST',
             data: {
                 id: event.id,

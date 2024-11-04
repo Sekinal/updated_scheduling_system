@@ -1,5 +1,7 @@
+# core/models.py
 from django.db import models
 import pytz
+from django.core.exceptions import ValidationError
 
 class SiteSettings(models.Model):
     TIMEZONE_CHOICES = [(tz, tz) for tz in pytz.all_timezones]
@@ -14,8 +16,10 @@ class SiteSettings(models.Model):
         verbose_name = 'Site Settings'
         verbose_name_plural = 'Site Settings'
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         if not self.pk and SiteSettings.objects.exists():
-            # Only allow one instance
-            return
-        return super(SiteSettings, self).save(*args, **kwargs)
+            raise ValidationError('Only one SiteSettings instance is allowed.')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super(SiteSettings, self).save(*args, **kwargs)

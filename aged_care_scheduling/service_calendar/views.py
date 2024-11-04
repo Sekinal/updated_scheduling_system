@@ -32,11 +32,12 @@ def calendar_view(request):
         'current_timezone': current_timezone,  # Pass timezone to template
     })
 
+
 @login_required
 def get_events(request):
     def parse_date(date_string):
         return parser.isoparse(date_string)
-
+    
     start = parse_date(request.GET.get('start'))
     end = parse_date(request.GET.get('end'))
 
@@ -69,12 +70,12 @@ def get_events(request):
         services = services.filter(service_type__id__in=service_types)
 
     current_tz = timezone.get_current_timezone()
-
+    
     events = [{
         'id': service.id,
         'title': f"{service.service_type.name} - {service.resident.first_name} {service.resident.last_name}",
-        'start': timezone.localtime(service.scheduled_time, current_tz).isoformat(),
-        'end': timezone.localtime(service.end_time, current_tz).isoformat(),
+        'start': timezone.localtime(service.scheduled_time).isoformat(),
+        'end': timezone.localtime(service.end_time).isoformat(),
         'resident': f"{service.resident.first_name} {service.resident.last_name}",
         'serviceType': service.service_type.name,
         'type': 'service',

@@ -1,5 +1,7 @@
+# core/middleware.py
 from django.utils import timezone
-from .models import SiteSettings
+from core.models import SiteSettings
+import pytz
 
 class TimezoneMiddleware:
     def __init__(self, get_response):
@@ -8,11 +10,16 @@ class TimezoneMiddleware:
     def __call__(self, request):
         try:
             settings = SiteSettings.objects.first()
-            if settings:
+            if settings and settings.timezone in dict(pytz.all_timezones):
                 timezone.activate(settings.timezone)
             else:
                 timezone.deactivate()
-        except Exception:
+        except Exception as e:
+            # Log the exception for debugging purposes
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"TimezoneMiddleware error: {e}")
             timezone.deactivate()
         
-        return self.get_response(request)
+        response = self.get_response(request)
+        return response
