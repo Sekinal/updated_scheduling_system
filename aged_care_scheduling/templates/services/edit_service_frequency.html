@@ -1,5 +1,3 @@
-<!-- edit_service_frequency.html -->
-
 {% extends 'base.html' %}
 {% load static %}
 
@@ -59,7 +57,7 @@
                         </div>
                         {% endif %}
                         <div class="mb-3">
-                            <label for="{{ form.service_type.id_for_label }}" class="form-label">Resident</label>
+                            <label for="{{ form.resident.id_for_label }}" class="form-label">Resident</label>
                             {{ form.resident }}
                         </div>
 
@@ -123,6 +121,12 @@
                         <div class="mb-3" id="endDateField" style="display: none;">
                             <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
                             {{ form.end_date }}
+                        </div>
+                        
+                        <!-- New Caregiver Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.caregiver.id_for_label }}" class="form-label">Assigned Caregiver</label>
+                            {{ form.caregiver }}
                         </div>
                         
                         <button type="submit" class="btn btn-primary btn-custom">

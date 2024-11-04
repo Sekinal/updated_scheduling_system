@@ -306,6 +306,9 @@ def edit_service_frequency(request, pk):
                 updated_frequency.end_date = form.cleaned_data['end_date']
                 updated_frequency.occurrences = None
             
+            # Optionally, handle caregiver reassignment logic here
+            # For example, you might need to update existing services if the caregiver has changed
+            
             # Delete existing future services that are scheduled
             Service.objects.filter(
                 resident=updated_frequency.resident,

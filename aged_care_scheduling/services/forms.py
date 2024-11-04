@@ -61,7 +61,6 @@ class ResidentServiceFrequencyForm(forms.ModelForm):
             'service_type': forms.Select(attrs={'id': 'id_service_type'}),
         }
 
-
     def __init__(self, *args, **kwargs):
         self.resident = kwargs.pop('resident', None)
         super().__init__(*args, **kwargs)
