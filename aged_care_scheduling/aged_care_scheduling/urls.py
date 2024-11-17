@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import DashboardView
+from .views import dashboard_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -10,5 +10,5 @@ urlpatterns = [
     path('residents/', include('residents.urls', namespace='residents')),
     path('service-calendar/', include('service_calendar.urls')),
     path('api/', include('api.urls')),
-    path('', DashboardView.as_view(), name='dashboard'),
+    path('', dashboard_view, name='dashboard'),
 ]
