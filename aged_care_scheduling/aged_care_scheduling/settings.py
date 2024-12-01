@@ -99,11 +99,11 @@ WSGI_APPLICATION = 'aged_care_scheduling.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'NAME': 'db_scheduling_system',
+        'USER': 'postgres',
+        'PASSWORD': 'db_pass',
+        'HOST': 'localhost',
+        'PORT': 5432,
     }
 }
 
